@@ -85,18 +85,19 @@ To convert a PredictedEventList instance to JSON, you have a few options since t
 ```python
 predicted_list = PredictedEventList(predictions=[...])
 json_string = predicted_list.model_dump_json()
- ```
 ```
 
-2. Using model_dump() with json.dumps() :
+2. Using `model_dump()` with `json.dumps()` :
+
 ```python
 import json
 
 predicted_list = PredictedEventList(predictions=[...])
 dict_data = predicted_list.model_dump()
 json_string = json.dumps(dict_data)
- ```
+
 ```
+
 
 Example usage with your code:
 
@@ -124,7 +125,6 @@ predicted_events = PredictedEventList(
 # Convert to JSON string
 json_string = predicted_events.model_dump_json()
 print(json_string)
- ```
 ```
 
 The output will be a properly formatted JSON string with all the nested objects and their attributes. Since PredictedEventList and all its nested classes ( PredictedEvent , WeightedEvent , Event ) are Pydantic models, the serialization will handle all the nested structures automatically.
@@ -137,36 +137,8 @@ json_string = predicted_events.model_dump_json(indent=2)
 
 # Exclude null values
 json_string = predicted_events.model_dump_json(exclude_none=True)
- ```
 ```
 
-## LiSiruiRay
-Copy
-
-Delete
-
-add a readme to the event_prediction explaining about the project and git add everything, commit, push
-
-## Trae
-22 context(s) used
-
-Workspace
-
-event_predictor.py 101-131
-
-event_predictor.py 21-25
-
-event_predictor.py 50-60
-
-event_predictor.py 1-158
-
-event_predictor.py 17-20
-
-... More ( 16 +)
-
-Based on the code I've examined, I'll create a README.md file for the event prediction project that explains its functionality and structure. Here's the content I'll add:
-
-```markdown
 # Event Prediction System
 
 ## Overview
@@ -180,7 +152,6 @@ The Event Prediction System is a sophisticated AI-powered tool that predicts fut
 - JSON-based input/output support
 
 ## Project Structure
- ```
 ```
 
 event_prediction/
@@ -188,8 +159,8 @@ event_prediction/
 └── test/                 # Test suite
 ├── run_tests.py      # Test runner
 └── test_event_predictor.py  # Unit tests
+```
 
-```plaintext
 
 ## Core Components
 
@@ -231,7 +202,6 @@ events = [
 
 # Get predictions
 predictions = predictor.predict_events(events)
- ```
 ```
 
 ## Testing
@@ -254,5 +224,7 @@ EVENT_PREDICTION_OPENAI_API_KEY=your_api_key_here
 - OpenAI Python SDK
 - Pydantic
 - python-dotenv
+  
+  
 ## Note
 This is part of a larger system that includes both backend prediction capabilities and a frontend interface for visualization and interaction.
