@@ -8,9 +8,12 @@ import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus } f
 import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" // import the graph
 import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
 
-
-
-
+// define time period type
+type TimePeriod = "day" | "week" | "month"
+// Define props interface with optional timePeriod
+interface NewsAnalysisProps {
+  defaultTimePeriod?: TimePeriod
+}
 
 export function NewsAnalysis() {
   const [viewType, setViewType] = useState<"list" | "pie" | "graph">("list")

@@ -23,7 +23,287 @@
     { "id": 3, "symbol": "AMZN", "name": "Amazon.com Inc.", "price": 178.75, "change": 3.45, "changePercent": 1.97 },
     { "id": 4, "symbol": "GOOGL", "name": "Alphabet Inc.", "price": 163.42, "change": 0.87, "changePercent": 0.54 }
   ],
-  "news": [
+  "personalday": [
+    {
+      "id": 1,
+      "title": "Fed Signals Potential Rate Cut in September",
+      "source": "Financial Times",
+      "time": "2 hours ago",
+      "sentiment": "positive",
+      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
+      "impact": 85
+    },
+    {
+      "id": 2,
+      "title": "Tech Stocks Rally as Earnings Beat Expectations",
+      "source": "Wall Street Journal",
+      "time": "4 hours ago",
+      "sentiment": "positive",
+      "categories": ["Technology", "Earnings", "Stock Market"],
+      "impact": 72
+    },
+    {
+      "id": 3,
+      "title": "Oil Prices Drop Amid Global Demand Concerns",
+      "source": "Bloomberg",
+      "time": "6 hours ago",
+      "sentiment": "negative",
+      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
+      "impact": 65
+    },
+    {
+      "id": 4,
+      "title": "Housing Market Shows Signs of Cooling",
+      "source": "CNBC",
+      "time": "8 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Real Estate", "Housing", "Economy"],
+      "impact": 58
+    },
+    {
+      "id": 5,
+      "title": "Retail Sales Decline for Second Consecutive Month",
+      "source": "Reuters",
+      "time": "10 hours ago",
+      "sentiment": "negative",
+      "categories": ["Retail", "Consumer Spending", "Economy"],
+      "impact": 63
+    },
+    {
+      "id": 6,
+      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
+      "source": "CoinDesk",
+      "time": "12 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
+      "impact": 55
+    }
+  ],
+  "personalweek": [
+    {
+      "id": 1,
+      "title": "Fed Signals Potential Rate Cut in September",
+      "source": "Financial Times",
+      "time": "2 hours ago",
+      "sentiment": "positive",
+      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
+      "impact": 85
+    },
+    {
+      "id": 2,
+      "title": "Tech Stocks Rally as Earnings Beat Expectations",
+      "source": "Wall Street Journal",
+      "time": "4 hours ago",
+      "sentiment": "positive",
+      "categories": ["Technology", "Earnings", "Stock Market"],
+      "impact": 72
+    },
+    {
+      "id": 3,
+      "title": "Oil Prices Drop Amid Global Demand Concerns",
+      "source": "Bloomberg",
+      "time": "6 hours ago",
+      "sentiment": "negative",
+      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
+      "impact": 65
+    },
+    {
+      "id": 4,
+      "title": "Housing Market Shows Signs of Cooling",
+      "source": "CNBC",
+      "time": "8 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Real Estate", "Housing", "Economy"],
+      "impact": 58
+    },
+    {
+      "id": 5,
+      "title": "Retail Sales Decline for Second Consecutive Month",
+      "source": "Reuters",
+      "time": "10 hours ago",
+      "sentiment": "negative",
+      "categories": ["Retail", "Consumer Spending", "Economy"],
+      "impact": 63
+    },
+    {
+      "id": 6,
+      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
+      "source": "CoinDesk",
+      "time": "12 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
+      "impact": 55
+    }
+  ],
+  "personalmonth": [
+    {
+      "id": 1,
+      "title": "Fed Signals Potential Rate Cut in September",
+      "source": "Financial Times",
+      "time": "2 hours ago",
+      "sentiment": "positive",
+      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
+      "impact": 85
+    },
+    {
+      "id": 2,
+      "title": "Tech Stocks Rally as Earnings Beat Expectations",
+      "source": "Wall Street Journal",
+      "time": "4 hours ago",
+      "sentiment": "positive",
+      "categories": ["Technology", "Earnings", "Stock Market"],
+      "impact": 72
+    },
+    {
+      "id": 3,
+      "title": "Oil Prices Drop Amid Global Demand Concerns",
+      "source": "Bloomberg",
+      "time": "6 hours ago",
+      "sentiment": "negative",
+      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
+      "impact": 65
+    },
+    {
+      "id": 4,
+      "title": "Housing Market Shows Signs of Cooling",
+      "source": "CNBC",
+      "time": "8 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Real Estate", "Housing", "Economy"],
+      "impact": 58
+    },
+    {
+      "id": 5,
+      "title": "Retail Sales Decline for Second Consecutive Month",
+      "source": "Reuters",
+      "time": "10 hours ago",
+      "sentiment": "negative",
+      "categories": ["Retail", "Consumer Spending", "Economy"],
+      "impact": 63
+    },
+    {
+      "id": 6,
+      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
+      "source": "CoinDesk",
+      "time": "12 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
+      "impact": 55
+    }
+  ],
+  "marketday": [
+    {
+      "id": 1,
+      "title": "Fed Signals Potential Rate Cut in September",
+      "source": "Financial Times",
+      "time": "2 hours ago",
+      "sentiment": "positive",
+      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
+      "impact": 85
+    },
+    {
+      "id": 2,
+      "title": "Tech Stocks Rally as Earnings Beat Expectations",
+      "source": "Wall Street Journal",
+      "time": "4 hours ago",
+      "sentiment": "positive",
+      "categories": ["Technology", "Earnings", "Stock Market"],
+      "impact": 72
+    },
+    {
+      "id": 3,
+      "title": "Oil Prices Drop Amid Global Demand Concerns",
+      "source": "Bloomberg",
+      "time": "6 hours ago",
+      "sentiment": "negative",
+      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
+      "impact": 65
+    },
+    {
+      "id": 4,
+      "title": "Housing Market Shows Signs of Cooling",
+      "source": "CNBC",
+      "time": "8 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Real Estate", "Housing", "Economy"],
+      "impact": 58
+    },
+    {
+      "id": 5,
+      "title": "Retail Sales Decline for Second Consecutive Month",
+      "source": "Reuters",
+      "time": "10 hours ago",
+      "sentiment": "negative",
+      "categories": ["Retail", "Consumer Spending", "Economy"],
+      "impact": 63
+    },
+    {
+      "id": 6,
+      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
+      "source": "CoinDesk",
+      "time": "12 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
+      "impact": 55
+    }
+  ],
+  "marketweek": [
+    {
+      "id": 1,
+      "title": "Fed Signals Potential Rate Cut in September",
+      "source": "Financial Times",
+      "time": "2 hours ago",
+      "sentiment": "positive",
+      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
+      "impact": 85
+    },
+    {
+      "id": 2,
+      "title": "Tech Stocks Rally as Earnings Beat Expectations",
+      "source": "Wall Street Journal",
+      "time": "4 hours ago",
+      "sentiment": "positive",
+      "categories": ["Technology", "Earnings", "Stock Market"],
+      "impact": 72
+    },
+    {
+      "id": 3,
+      "title": "Oil Prices Drop Amid Global Demand Concerns",
+      "source": "Bloomberg",
+      "time": "6 hours ago",
+      "sentiment": "negative",
+      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
+      "impact": 65
+    },
+    {
+      "id": 4,
+      "title": "Housing Market Shows Signs of Cooling",
+      "source": "CNBC",
+      "time": "8 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Real Estate", "Housing", "Economy"],
+      "impact": 58
+    },
+    {
+      "id": 5,
+      "title": "Retail Sales Decline for Second Consecutive Month",
+      "source": "Reuters",
+      "time": "10 hours ago",
+      "sentiment": "negative",
+      "categories": ["Retail", "Consumer Spending", "Economy"],
+      "impact": 63
+    },
+    {
+      "id": 6,
+      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
+      "source": "CoinDesk",
+      "time": "12 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
+      "impact": 55
+    }
+  ],
+  "marketmonthnews": [
     {
       "id": 1,
       "title": "Fed Signals Potential Rate Cut in September",
