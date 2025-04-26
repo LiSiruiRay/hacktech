@@ -248,7 +248,6 @@ The system requires an OpenAI API key, which should be stored in a .env file:
 ```plaintext
 EVENT_PREDICTION_OPENAI_API_KEY=your_api_key_here
  ```
-```
 
 ## Dependencies
 - Python 3.x
