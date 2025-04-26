@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { NetworkNode, NetworkLink, EventPredictionGraphProps } from "@/types";
+
 
 // Define TypeScript interfaces
 interface Event {
@@ -57,7 +59,7 @@ const pulseKeyframes = `
 }
 `;
 
-const EventPredictionGraph = () => {
+const EventPredictionGraph = ({ networkNodes, networkLinks }: EventPredictionGraphProps) => {
   const { theme } = useTheme();
   // if dark mode -- boolean tracker to change colors
   const isDarkMode = theme === 'dark';

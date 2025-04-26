@@ -1,101 +1,69 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
 import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" // import the graph
+import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
 
-// Mock news data
-const newsData = [
-  {
-    id: 1,
-    title: "Fed Signals Potential Rate Cut in September",
-    source: "Financial Times",
-    time: "2 hours ago",
-    sentiment: "positive",
-    categories: ["Federal Reserve", "Interest Rates", "Economy"],
-    impact: 85,
-  },
-  {
-    id: 2,
-    title: "Tech Stocks Rally as Earnings Beat Expectations",
-    source: "Wall Street Journal",
-    time: "4 hours ago",
-    sentiment: "positive",
-    categories: ["Technology", "Earnings", "Stock Market"],
-    impact: 72,
-  },
-  {
-    id: 3,
-    title: "Oil Prices Drop Amid Global Demand Concerns",
-    source: "Bloomberg",
-    time: "6 hours ago",
-    sentiment: "negative",
-    categories: ["Oil & Gas", "Commodities", "Global Economy"],
-    impact: 65,
-  },
-  {
-    id: 4,
-    title: "Housing Market Shows Signs of Cooling",
-    source: "CNBC",
-    time: "8 hours ago",
-    sentiment: "neutral",
-    categories: ["Real Estate", "Housing", "Economy"],
-    impact: 58,
-  },
-  {
-    id: 5,
-    title: "Retail Sales Decline for Second Consecutive Month",
-    source: "Reuters",
-    time: "10 hours ago",
-    sentiment: "negative",
-    categories: ["Retail", "Consumer Spending", "Economy"],
-    impact: 63,
-  },
-  {
-    id: 6,
-    title: "Cryptocurrency Market Stabilizes After Volatile Week",
-    source: "CoinDesk",
-    time: "12 hours ago",
-    sentiment: "neutral",
-    categories: ["Cryptocurrency", "Bitcoin", "Digital Assets"],
-    impact: 55,
-  },
-]
 
-// Data for pie chart
-const sentimentData = [
-  { name: "Positive", value: 2, color: "#22c55e" },
-  { name: "Neutral", value: 2, color: "#f59e0b" },
-  { name: "Negative", value: 2, color: "#ef4444" },
-]
 
-// Data for network graph (simplified for this example)
-const networkNodes = [
-  { id: "Fed", group: 1 },
-  { id: "Tech", group: 2 },
-  { id: "Oil", group: 3 },
-  { id: "Housing", group: 4 },
-  { id: "Retail", group: 5 },
-  { id: "Crypto", group: 6 },
-  { id: "Economy", group: 7 },
-  { id: "Stocks", group: 2 },
-]
 
-const networkLinks = [
-  { source: "Fed", target: "Economy", value: 8 },
-  { source: "Tech", target: "Stocks", value: 7 },
-  { source: "Oil", target: "Economy", value: 6 },
-  { source: "Housing", target: "Economy", value: 5 },
-  { source: "Retail", target: "Economy", value: 6 },
-  { source: "Crypto", target: "Stocks", value: 4 },
-]
 
 export function NewsAnalysis() {
   const [viewType, setViewType] = useState<"list" | "pie" | "graph">("list")
+  const [newsData, setNewsData] = useState<NewsData[]>([]);
+  const [sentimentData, setSentimentData] = useState<SentimentData[]>([]);
+  const [networkNodes, setNetworkNodes] = useState<NetworkNode[]>([]);
+  const [networkLinks, setNetworkLinks] = useState<NetworkLink[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [newsResponse, sentimentResponse, nodesResponse, linksResponse] = await Promise.all([
+          fetch('http://localhost:3001/news'),
+          fetch('http://localhost:3001/sentiment'),
+          fetch('http://localhost:3001/networknodes'),
+          fetch('http://localhost:3001/networklinks')
+        ]);
+  
+        if (!newsResponse.ok || !sentimentResponse.ok || !nodesResponse.ok || !linksResponse.ok) {
+          throw new Error('Failed to fetch one or more datasets');
+        }
+  
+        const news = await newsResponse.json();
+        const sentiment = await sentimentResponse.json();
+        const nodes = await nodesResponse.json();
+        const links = await linksResponse.json();
+  
+        setNewsData(news);
+        setSentimentData(sentiment);
+        setNetworkNodes(nodes);
+        setNetworkLinks(links);
+  
+      } catch (err) {
+        console.error(err);
+        setError('Error loading financial data.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  
+    fetchData();
+  }, []);
+  if (loading) {
+    return <div className="p-4 text-center">Loading financial data...</div>;
+  }
+  
+  if (error) {
+    return <div className="p-4 text-center text-red-500">{error}</div>;
+  }
+  
+  
   const getSentimentIcon = (sentiment: string) => {
     switch (sentiment) {
       case "positive":
@@ -120,37 +88,50 @@ export function NewsAnalysis() {
 
   return (
     <div className="space-y-5">
+      {/* Top section: header + view toggles */}
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Financial News Impact</h3>
+        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">
+          Financial News Impact
+        </h3>
         <div className="flex space-x-1 border rounded-md overflow-hidden border-slate-200 dark:border-slate-700">
           <button
             onClick={() => setViewType("list")}
-            className={`p-2 transition-colors ${viewType === "list" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+            className={`p-2 transition-colors ${
+              viewType === "list" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+            }`}
             aria-label="List view"
           >
             <List className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewType("pie")}
-            className={`p-2 transition-colors ${viewType === "pie" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+            className={`p-2 transition-colors ${
+              viewType === "pie" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+            }`}
             aria-label="Pie chart view"
           >
             <PieChartIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewType("graph")}
-            className={`p-2 transition-colors ${viewType === "graph" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+            className={`p-2 transition-colors ${
+              viewType === "graph" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+            }`}
             aria-label="Relational graph view"
           >
             <Network className="h-4 w-4" />
           </button>
         </div>
       </div>
-
+  
+      {/* Main content based on viewType */}
       {viewType === "list" && (
         <div className="space-y-3 h-full overflow-y-auto pr-1">
           {newsData.map((news) => (
-            <Card key={news.id} className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30">
+            <Card
+              key={news.id}
+              className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30"
+            >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 bg-primary/10 dark:bg-primary/20 p-2 rounded-full">
@@ -186,8 +167,8 @@ export function NewsAnalysis() {
           ))}
         </div>
       )}
-
-      {/* guarantee min height of 400px -- don't allow it to collapse */}
+  
+      {/* Pie chart view */}
       {viewType === "pie" && (
         <div className="h-[400px] flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
@@ -208,20 +189,23 @@ export function NewsAnalysis() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              {/* removed recharts tooltip bc the hover looks stupid */}
-              {/* it's interactive tho so maybe add it back later with better dark/light mode support and actually useful info instead of what is already shown */}
             </PieChart>
           </ResponsiveContainer>
         </div>
       )}
-
+  
+      {/* Graph view */}
       {viewType === "graph" && (
         <div className="h-full overflow-hidden rounded-lg">
           <div className="h-full">
-            <EventPredictionGraph />
+            <EventPredictionGraph
+              networkNodes={networkNodes}
+              networkLinks={networkLinks}
+            />
           </div>
         </div>
       )}
     </div>
-  )
+  );
+  
 }
