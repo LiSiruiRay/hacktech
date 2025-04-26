@@ -210,13 +210,9 @@ export function NewsAnalysis() {
       )}
 
       {viewType === "graph" && (
-        <div className="h-[400px] flex items-center justify-center bg-muted/50 rounded-lg">
-          <div className="text-center p-6">
-            <Network className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium">News Relationship Graph</h3>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
-              This view shows how different news topics are related to each other and their impact on financial markets.
-            </p>
+        <div className="h-[400px] overflow-hidden rounded-lg">
+          <div className="h-full">
+            <EventPredictionGraph />
           </div>
         </div>
       )}
