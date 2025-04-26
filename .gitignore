@@ -61,6 +61,13 @@ ENV/
 venv.bak/
 .venv
 .python-version
+virtualenv/
+.virtualenv/
+pythonenv/
+.pytest_cache/
+pytest_cache/
+.coverage
+htmlcov/
 *.egg-info/
 .installed.cfg
 *.egg
