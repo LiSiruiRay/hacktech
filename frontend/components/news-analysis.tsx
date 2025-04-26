@@ -5,8 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
 import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react"
-import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated"
-import { WcagComplianceInfo } from "@/components/wcag-compliance-info"
+import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" // import the graph component for display in graph view
 
 // Mock news data
 const newsData = [
@@ -120,7 +119,7 @@ export function NewsAnalysis() {
   }
 
   return (
-    <div className="space-y-5 h-full flex flex-col">
+    <div className="space-y-5">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Financial News Impact</h3>
         <div className="flex space-x-1 border rounded-md overflow-hidden">
@@ -148,9 +147,8 @@ export function NewsAnalysis() {
         </div>
       </div>
 
-      {/* View content sections */}
       {viewType === "list" && (
-        <div className="space-y-3 flex-1 overflow-y-auto pr-1 scrollbar-thin">
+        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
           {newsData.map((news) => (
             <Card key={news.id} className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary">
               <CardContent className="p-4">
@@ -190,7 +188,7 @@ export function NewsAnalysis() {
       )}
 
       {viewType === "pie" && (
-        <div className="h-full flex-1 flex items-center justify-center">
+        <div className="h-[400px] flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -214,17 +212,12 @@ export function NewsAnalysis() {
       )}
 
       {viewType === "graph" && (
-        <div className="h-full flex-1 overflow-hidden rounded-lg">
+        <div className="h-[400px] overflow-hidden rounded-lg">
           <div className="h-full">
             <EventPredictionGraph />
           </div>
         </div>
       )}
-      
-      {/* WCAG Compliance Info component */}
-      <div className="mt-auto pt-4">
-        <WcagComplianceInfo />
-      </div>
     </div>
   )
 }
