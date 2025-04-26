@@ -119,27 +119,27 @@ export function NewsAnalysis() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 h-full flex flex-col">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Financial News Impact</h3>
-        <div className="flex space-x-1 border rounded-md">
+        <div className="flex space-x-1 border rounded-md overflow-hidden">
           <button
             onClick={() => setViewType("list")}
-            className={`p-1.5 ${viewType === "list" ? "bg-muted" : ""}`}
+            className={`p-2 transition-colors ${viewType === "list" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
             aria-label="List view"
           >
             <List className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewType("pie")}
-            className={`p-1.5 ${viewType === "pie" ? "bg-muted" : ""}`}
+            className={`p-2 transition-colors ${viewType === "pie" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
             aria-label="Pie chart view"
           >
             <PieChartIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewType("graph")}
-            className={`p-1.5 ${viewType === "graph" ? "bg-muted" : ""}`}
+            className={`p-2 transition-colors ${viewType === "graph" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
             aria-label="Relational graph view"
           >
             <Network className="h-4 w-4" />
@@ -148,12 +148,14 @@ export function NewsAnalysis() {
       </div>
 
       {viewType === "list" && (
-        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+        <div className="space-y-3 flex-1 overflow-y-auto pr-1 scrollbar-thin">
           {newsData.map((news) => (
-            <Card key={news.id} className="hover:bg-accent/50 cursor-pointer transition-colors">
+            <Card key={news.id} className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5">{getSentimentIcon(news.sentiment)}</div>
+                  <div className="mt-0.5 bg-primary/10 p-2 rounded-full">
+                    {getSentimentIcon(news.sentiment)}
+                  </div>
                   <div className="flex-1">
                     <h4 className="font-medium">{news.title}</h4>
                     <div className="flex items-center text-xs text-muted-foreground mt-1">
@@ -186,7 +188,7 @@ export function NewsAnalysis() {
       )}
 
       {viewType === "pie" && (
-        <div className="h-[400px] flex items-center justify-center">
+        <div className="h-full flex-1 flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -210,7 +212,7 @@ export function NewsAnalysis() {
       )}
 
       {viewType === "graph" && (
-        <div className="h-[400px] overflow-hidden rounded-lg">
+        <div className="h-full flex-1 overflow-hidden rounded-lg">
           <div className="h-full">
             <EventPredictionGraph />
           </div>
