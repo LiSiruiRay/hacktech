@@ -1,5 +1,5 @@
-{/* WHEREVER YOU PUT THIS, MAKE SURE IT IS ACTUALLY COMPLIANT - AND CHECK THE LIST OF STUFF BC IT'S PROBABLY INCOMPLETE */}
 "use client"
+{/* WHEREVER YOU PUT THIS, MAKE SURE IT IS ACTUALLY COMPLIANT - AND CHECK THE LIST OF STUFF BC IT'S PROBABLY INCOMPLETE */}
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,7 +36,7 @@ export function WcagComplianceInfo() {
                 <li>Responsive design that supports text resizing up to 200%</li>
               </ul>
               
-              <p>For more information about our accessibility features or to report accessibility issues, please contact our support team.</p>
+              <p>To report accessibility issues, please contact us.</p>
             </div>
           </CardContent>
         </Card>
