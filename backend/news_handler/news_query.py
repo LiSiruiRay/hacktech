@@ -1,7 +1,7 @@
 import os
 import hashlib
 import requests
-import newspaper
+# import newspaper
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from news import News, Event
@@ -139,4 +139,4 @@ def real_time_query(time_range, max_clusters=5, max_words=150):
         
     
 if __name__ == "__main__":
-   print(real_time_query("week"))
+   print(real_time_query("day"))
