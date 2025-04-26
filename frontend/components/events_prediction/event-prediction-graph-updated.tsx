@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowRight, ZoomIn, ZoomOut, Move } from 'lucide-react';
 
 // Define TypeScript interfaces
 interface Event {
@@ -17,6 +17,14 @@ interface Connection {
   id: string;
   label?: string;
   relationship: boolean; // true = relationship between happened events, false = prediction
+}
+
+// Define ViewBox interface for SVG viewBox
+interface ViewBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 const EventPredictionGraph = () => {
@@ -45,6 +53,29 @@ const EventPredictionGraph = () => {
 
   // For animation of predicted events
   const [visiblePredictions, setVisiblePredictions] = useState<string[]>([]);
+  
+  // For zoom and pan functionality
+  const [viewBox, setViewBox] = useState<ViewBox>({ x: 0, y: 0, width: 1000, height: 800 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Calculate the bounds of all events to determine initial viewBox
+  useEffect(() => {
+    if (events.length === 0) return;
+    
+    // Find min and max coordinates to determine the graph bounds
+    const minX = Math.min(...events.map(e => e.x)) - 50;
+    const minY = Math.min(...events.map(e => e.y)) - 50;
+    const maxX = Math.max(...events.map(e => e.x + 150)) + 50;
+    const maxY = Math.max(...events.map(e => e.y + 100)) + 50;
+    
+    const width = maxX - minX;
+    const height = maxY - minY;
+    
+    // Set initial viewBox to show all events
+    setViewBox({ x: minX, y: minY, width, height });
+  }, [events]);
 
   // Animate the predicted events to appear one by one
   useEffect(() => {
@@ -151,8 +182,85 @@ const EventPredictionGraph = () => {
     });
   };
 
+  // Zoom functions
+  const handleZoomIn = () => {
+    setViewBox(prev => ({
+      ...prev,
+      width: prev.width * 0.8,
+      height: prev.height * 0.8,
+      // Adjust x and y to zoom toward center
+      x: prev.x + prev.width * 0.1,
+      y: prev.y + prev.height * 0.1
+    }));
+  };
+  
+  const handleZoomOut = () => {
+    setViewBox(prev => ({
+      ...prev,
+      width: prev.width * 1.25,
+      height: prev.height * 1.25,
+      // Adjust x and y to zoom from center
+      x: prev.x - prev.width * 0.125,
+      y: prev.y - prev.height * 0.125
+    }));
+  };
+  
+  const handleZoomReset = () => {
+    // Reset to show all events
+    const minX = Math.min(...events.map(e => e.x)) - 50;
+    const minY = Math.min(...events.map(e => e.y)) - 50;
+    const maxX = Math.max(...events.map(e => e.x + 150)) + 50;
+    const maxY = Math.max(...events.map(e => e.y + 100)) + 50;
+    
+    const width = maxX - minX;
+    const height = maxY - minY;
+    
+    setViewBox({ x: minX, y: minY, width, height });
+  };
+  
+  // Pan functions
+  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (svgRef.current) {
+      const pt = svgRef.current.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const svgP = pt.matrixTransform(svgRef.current.getScreenCTM()?.inverse());
+      
+      setIsDragging(true);
+      setDragStart({ x: svgP.x, y: svgP.y });
+    }
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!isDragging || !svgRef.current) return;
+    
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svgRef.current.getScreenCTM()?.inverse());
+    
+    const dx = svgP.x - dragStart.x;
+    const dy = svgP.y - dragStart.y;
+    
+    setViewBox(prev => ({
+      ...prev,
+      x: prev.x - dx,
+      y: prev.y - dy
+    }));
+    
+    setDragStart({ x: svgP.x, y: svgP.y });
+  };
+  
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+  
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
   return (
-    <div className="w-full h-screen bg-gray-50 p-4 relative overflow-hidden">
+    <div className="w-full h-full bg-gray-50 p-4 relative overflow-hidden">
       <h1 className="text-2xl font-bold mb-4">Event Prediction Network</h1>
       
       <div className="flex mb-4 gap-4 flex-wrap">
@@ -174,8 +282,41 @@ const EventPredictionGraph = () => {
         </div>
       </div>
       
+      {/* Zoom controls */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        <button 
+          className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
+          onClick={handleZoomIn}
+          title="Zoom In"
+        >
+          <ZoomIn size={20} />
+        </button>
+        <button 
+          className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
+          onClick={handleZoomOut}
+          title="Zoom Out"
+        >
+          <ZoomOut size={20} />
+        </button>
+        <button 
+          className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
+          onClick={handleZoomReset}
+          title="Reset View"
+        >
+          <Move size={20} />
+        </button>
+      </div>
+      
       <div className="relative w-full h-full border border-gray-200 rounded-lg bg-white">
-        <svg className="w-full h-full">
+        <svg 
+          ref={svgRef}
+          className={`w-full h-full ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        >
           {/* Render connections first so they appear behind nodes */}
           {renderConnections()}
           
