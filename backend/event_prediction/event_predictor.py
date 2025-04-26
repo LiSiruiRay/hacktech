@@ -47,6 +47,12 @@ class PredictorType(Enum):
     PUBLIC = "Public market predictor"
     PRIVATE = "Private market predictor"
 
+class PrivatePredictionModels(Enum):
+    QWQ_32B = "qwq-32b"
+    GEMMA_27B_IT = "gemma-27b-it"
+    DEEPSEEK_V3_0324 = "deepseek-v3-0324"
+    
+
 class EventPredictor:
     """
     A class for predicting future events based on past events using OpenAI's API.
@@ -115,7 +121,7 @@ class EventPredictor:
         
         return prompt
     
-    def predict_events(self, events: List[Union[NewsEvent, Event]], num_predictions: int = 3) -> PredictedEventList:
+    def predict_events(self, events: List[Union[NewsEvent, Event]], num_predictions: int = 3, private_predict_model: PrivatePredictionModels = PrivatePredictionModels.QWQ_32B.name) -> PredictedEventList:
         """
         Predict future events based on past events.
         
@@ -142,7 +148,7 @@ class EventPredictor:
             )
         elif self.predictor_type == PredictorType.PRIVATE:
             completion = self.client.beta.chat.completions.parse(
-                            model="qwq-32b",
+                            model=private_predict_model,
                             messages=[
                                 {"role": "system", "content": prompt},
                                 {"role": "user", "content": f"Predict {num_predictions} future events based on the provided past events."}

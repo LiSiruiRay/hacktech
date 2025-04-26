@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 # Add the parent directory to the Python path to import the EventPredictor module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from event_predictor import EventPredictor, Event, News, PredictedEvent, PredictedEventList, NewsEvent, WeightedEvent
+from event_predictor import EventPredictor, Event, News, PredictedEvent, PredictedEventList, NewsEvent, WeightedEvent, PredictorType
 from typing import Union, List  # This import is already correct
 
 load_dotenv()
@@ -126,6 +126,14 @@ class TestEventPredictor(unittest.TestCase):
         """Test the prediction method."""
         
         predicted = self.predictor.predict_events(self.sample_events)
+        print(predicted)
+        json_predicted = predicted.model_dump()
+        print(f"json_predicted: {json.dumps(json_predicted, indent=4)}")
+    
+    def test_private_prediction(self):
+        """Test the prediction method."""
+        pd = EventPredictor(api_key=self.mock_api_key, predictor_type=PredictorType.PRIVATE)
+        predicted = pd.predict_events(self.sample_events)
         print(predicted)
         json_predicted = predicted.model_dump()
         print(f"json_predicted: {json.dumps(json_predicted, indent=4)}")
