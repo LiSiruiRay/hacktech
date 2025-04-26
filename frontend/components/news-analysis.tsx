@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
 import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react"
-import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" // import the graph component for display in graph view
+import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" // import the graph
 
 // Mock news data
 const newsData = [
@@ -121,8 +121,8 @@ export function NewsAnalysis() {
   return (
     <div className="space-y-5">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Financial News Impact</h3>
-        <div className="flex space-x-1 border rounded-md overflow-hidden">
+        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Financial News Impact</h3>
+        <div className="flex space-x-1 border rounded-md overflow-hidden border-slate-200 dark:border-slate-700">
           <button
             onClick={() => setViewType("list")}
             className={`p-2 transition-colors ${viewType === "list" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
@@ -148,16 +148,16 @@ export function NewsAnalysis() {
       </div>
 
       {viewType === "list" && (
-        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
+        <div className="space-y-3 h-full overflow-y-auto pr-1">
           {newsData.map((news) => (
-            <Card key={news.id} className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary">
+            <Card key={news.id} className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 bg-primary/10 p-2 rounded-full">
+                  <div className="mt-0.5 bg-primary/10 dark:bg-primary/20 p-2 rounded-full">
                     {getSentimentIcon(news.sentiment)}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium">{news.title}</h4>
+                    <h4 className="font-medium text-slate-800 dark:text-slate-100">{news.title}</h4>
                     <div className="flex items-center text-xs text-muted-foreground mt-1">
                       <span>{news.source}</span>
                       <span className="mx-2">•</span>
@@ -187,6 +187,7 @@ export function NewsAnalysis() {
         </div>
       )}
 
+      {/* guarantee min height of 400px -- don't allow it to collapse */}
       {viewType === "pie" && (
         <div className="h-[400px] flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
@@ -205,14 +206,14 @@ export function NewsAnalysis() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <RechartsTooltip />
+              <RechartsTooltip contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
       )}
 
       {viewType === "graph" && (
-        <div className="h-[400px] overflow-hidden rounded-lg">
+        <div className="h-full overflow-hidden rounded-lg">
           <div className="h-full">
             <EventPredictionGraph />
           </div>

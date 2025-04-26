@@ -1,9 +1,17 @@
 "use client"
 
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts"
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 // Mock data for the charts
 const personalData = [
@@ -46,27 +54,44 @@ export function MarketOverview({ type }: MarketOverviewProps) {
   const isPositive = !change.includes("-")
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-muted-foreground">{title}</p>
-                <h3 className="text-2xl font-bold">{value}</h3>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border border-border/50 shadow-md overflow-hidden">
+          <CardContent className="p-0">
+            <div className="p-6 pb-0">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-muted-foreground">{title}</p>
+                    <TooltipProvider>
+                      <UITooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full">
+                            <Info className="h-3 w-3" />
+                            <span className="sr-only">More info</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Performance over the last 7 months</p>
+                        </TooltipContent>
+                      </UITooltip>
+                    </TooltipProvider>
+                  </div>
+                  <h3 className="text-2xl font-bold">{value}</h3>
+                </div>
+                <Badge variant={isPositive ? "default" : "destructive"} className="flex items-center">
+                  {isPositive ? (
+                    <ArrowUpRight className="h-3.5 w-3.5 mr-1" />
+                  ) : (
+                    <ArrowDownRight className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  {change}
+                </Badge>
               </div>
-              <Badge variant={isPositive ? "default" : "destructive"} className="flex items-center">
-                {isPositive ? (
-                  <ArrowUpRight className="h-3.5 w-3.5 mr-1" />
-                ) : (
-                  <ArrowDownRight className="h-3.5 w-3.5 mr-1" />
-                )}
-                {change}
-              </Badge>
             </div>
-            <div className="h-[200px] mt-4">
+            <div className="h-[250px] mt-2">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data}>
+                <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
