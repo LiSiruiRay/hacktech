@@ -113,8 +113,8 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
     all_news_list = []     
     
     for day_offset in range(days_to_query):
-        end_day = (datetime.now() - timedelta(days = day_offset - 1)).strftime("%Y%m%dT%H%M")
-        start_day = (datetime.now() - timedelta(days=day_offset)).strftime("%Y%m%dT%H%M")
+        end_day = (datetime.now() - timedelta(days = day_offset)).strftime("%Y%m%dT%H%M")
+        start_day = (datetime.now() - timedelta(days=day_offset + 1)).strftime("%Y%m%dT%H%M")
         if keywords == []:
             url = f'https://www.alphavantage.co/query?function=NEWS_SENTIMENT&time_from={start_day}&time_to={end_day}&limit={daily_limit}&apikey={alpha_vantage_api_key}'
         else:
