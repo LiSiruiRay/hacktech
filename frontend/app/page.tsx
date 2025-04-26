@@ -72,7 +72,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="pt-5">
               <Tabs defaultValue="personal">
-                <TabsList className="mb-5 bg-muted/50 w-full md:w-auto">
+                <TabsList className="mb-5 w-full md:w-auto">
                   <TabsTrigger value="personal">My Portfolio</TabsTrigger>
                   <TabsTrigger value="market">Market Overview</TabsTrigger>
                 </TabsList>
