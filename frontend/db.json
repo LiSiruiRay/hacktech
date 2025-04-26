@@ -1,194 +1,190 @@
 {
-  "personal": [
-    { "name": "Jan", "value": 4000 },
-    { "name": "Feb", "value": 3000 },
-    { "name": "Mar", "value": 5000 },
-    { "name": "Apr", "value": 4800 },
-    { "name": "May", "value": 6000 },
-    { "name": "Jun", "value": 5500 },
-    { "name": "Jul", "value": 7000 }
+  "personalDay": [
+    { "name": "9 AM", "value": 6850 },
+    { "name": "10 AM", "value": 7080 },
+    { "name": "11 AM", "value": 6595 },
+    { "name": "12 PM", "value": 7220 },
+    { "name": "1 PM", "value": 6450 },
+    { "name": "2 PM", "value": 7375 },
+    { "name": "3 PM", "value": 7200 }
   ],
-  "market" : [
-    { "name": "Jan", "value": 30000 },
-    { "name": "Feb", "value": 32000 },
-    { "name": "Mar", "value": 31000 },
-    { "name": "Apr", "value": 33000 },
-    { "name": "May", "value": 34500 },
-    { "name": "Jun", "value": 34000 },
-    { "name": "Jul", "value": 36000 }
+  "personalWeek": [
+    { "name": "Mon", "value": 6780 },
+    { "name": "Tue", "value": 6930 },
+    { "name": "Wed", "value": 6595 },
+    { "name": "Thu", "value": 6720 },
+    { "name": "Fri", "value": 7200 }
+  ],
+  "personalMonth": [
+    { "name": "Jan", "value": 4200 },
+    { "name": "Feb", "value": 3800 },
+    { "name": "Mar", "value": 5100 },
+    { "name": "Apr", "value": 4950 },
+    { "name": "May", "value": 6200 },
+    { "name": "Jun", "value": 5800 },
+    { "name": "Jul", "value": 7200 }
+  ],
+  "marketDay": [
+    { "name": "9 AM", "value": 35400 },
+    { "name": "10 AM", "value": 35450 },
+    { "name": "11 AM", "value": 35380 },
+    { "name": "12 PM", "value": 35520 },
+    { "name": "1 PM", "value": 35680 },
+    { "name": "2 PM", "value": 35780 },
+    { "name": "3 PM", "value": 35950 }
+  ],
+  "marketWeek": [
+    { "name": "Mon", "value": 35100 },
+    { "name": "Tue", "value": 35300 },
+    { "name": "Wed", "value": 35250 },
+    { "name": "Thu", "value": 35650 },
+    { "name": "Fri", "value": 35950 }
+  ],
+  "marketMonth": [
+    { "name": "Jan", "value": 30500 },
+    { "name": "Feb", "value": 31800 },
+    { "name": "Mar", "value": 31200 },
+    { "name": "Apr", "value": 33400 },
+    { "name": "May", "value": 34800 },
+    { "name": "Jun", "value": 34300 },
+    { "name": "Jul", "value": 36400 }
+  ],
+  "personal": [
+    { "name": "Jan", "value": 4200 },
+    { "name": "Feb", "value": 3800 },
+    { "name": "Mar", "value": 5100 },
+    { "name": "Apr", "value": 4950 },
+    { "name": "May", "value": 6200 },
+    { "name": "Jun", "value": 5800 },
+    { "name": "Jul", "value": 7100 }
+  ],
+  "market": [
+    { "name": "Jan", "value": 30500 },
+    { "name": "Feb", "value": 31800 },
+    { "name": "Mar", "value": 31200 },
+    { "name": "Apr", "value": 33400 },
+    { "name": "May", "value": 34800 },
+    { "name": "Jun", "value": 34300 },
+    { "name": "Jul", "value": 36400 }
   ],
   "stock": [
-    { "id": 1, "symbol": "AAPL", "name": "Apple Inc.", "price": 182.52, "change": 1.25, "changePercent": 0.69 },
-    { "id": 2, "symbol": "MSFT", "name": "Microsoft Corp.", "price": 417.88, "change": -2.32, "changePercent": -0.55 },
-    { "id": 3, "symbol": "AMZN", "name": "Amazon.com Inc.", "price": 178.75, "change": 3.45, "changePercent": 1.97 },
-    { "id": 4, "symbol": "GOOGL", "name": "Alphabet Inc.", "price": 163.42, "change": 0.87, "changePercent": 0.54 }
+    { "id": 1, "symbol": "AAPL", "name": "Apple Inc.", "price": 194.83, "change": 3.25, "changePercent": 1.69 },
+    { "id": 2, "symbol": "MSFT", "name": "Microsoft Corp.", "price": 425.52, "change": -4.12, "changePercent": -0.96 },
+    { "id": 3, "symbol": "AMZN", "name": "Amazon.com Inc.", "price": 184.43, "change": 5.76, "changePercent": 3.22 },
+    { "id": 4, "symbol": "GOOGL", "name": "Alphabet Inc.", "price": 169.87, "change": 2.45, "changePercent": 1.46 }
   ],
   "personalday": [
     {
       "id": 1,
-      "title": "Fed Signals Potential Rate Cut in September",
-      "source": "Financial Times",
-      "time": "2 hours ago",
+      "title": "Your Portfolio Value Up 2.8% Today",
+      "source": "Portfolio Alert",
+      "time": "1 hour ago",
       "sentiment": "positive",
-      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
-      "impact": 85
+      "categories": ["Portfolio Performance", "Stocks", "Daily Recap"],
+      "impact": 89
     },
     {
       "id": 2,
-      "title": "Tech Stocks Rally as Earnings Beat Expectations",
-      "source": "Wall Street Journal",
-      "time": "4 hours ago",
+      "title": "Dividend Payment Received from AAPL",
+      "source": "Account Update",
+      "time": "3 hours ago",
       "sentiment": "positive",
-      "categories": ["Technology", "Earnings", "Stock Market"],
-      "impact": 72
+      "categories": ["Dividends", "Income", "Apple"],
+      "impact": 71
     },
     {
       "id": 3,
-      "title": "Oil Prices Drop Amid Global Demand Concerns",
-      "source": "Bloomberg",
-      "time": "6 hours ago",
-      "sentiment": "negative",
-      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
-      "impact": 65
+      "title": "Tech Allocation Exceeding Target Range",
+      "source": "Portfolio Alert",
+      "time": "5 hours ago",
+      "sentiment": "neutral",
+      "categories": ["Asset Allocation", "Technology", "Risk Management"],
+      "impact": 59
     },
     {
       "id": 4,
-      "title": "Housing Market Shows Signs of Cooling",
-      "source": "CNBC",
-      "time": "8 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Real Estate", "Housing", "Economy"],
-      "impact": 58
-    },
-    {
-      "id": 5,
-      "title": "Retail Sales Decline for Second Consecutive Month",
-      "source": "Reuters",
-      "time": "10 hours ago",
+      "title": "MSFT Shares Down After Earnings Miss",
+      "source": "Stock Alert",
+      "time": "7 hours ago",
       "sentiment": "negative",
-      "categories": ["Retail", "Consumer Spending", "Economy"],
-      "impact": 63
-    },
-    {
-      "id": 6,
-      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
-      "source": "CoinDesk",
-      "time": "12 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
-      "impact": 55
+      "categories": ["Microsoft", "Earnings", "Technology"],
+      "impact": 76
     }
   ],
   "personalweek": [
     {
       "id": 1,
-      "title": "Fed Signals Potential Rate Cut in September",
-      "source": "Financial Times",
-      "time": "2 hours ago",
+      "title": "Weekly Portfolio Growth: +3.9%",
+      "source": "Weekly Summary",
+      "time": "Yesterday",
       "sentiment": "positive",
-      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
-      "impact": 85
+      "categories": ["Portfolio Performance", "Weekly Recap"],
+      "impact": 92
     },
     {
       "id": 2,
-      "title": "Tech Stocks Rally as Earnings Beat Expectations",
-      "source": "Wall Street Journal",
-      "time": "4 hours ago",
+      "title": "Amazon Stock Split Announced",
+      "source": "Brokerage Update",
+      "time": "2 days ago",
       "sentiment": "positive",
-      "categories": ["Technology", "Earnings", "Stock Market"],
-      "impact": 72
+      "categories": ["Amazon", "Stock Split", "Technology"],
+      "impact": 81
     },
     {
       "id": 3,
-      "title": "Oil Prices Drop Amid Global Demand Concerns",
-      "source": "Bloomberg",
-      "time": "6 hours ago",
+      "title": "Energy Sector Underperforming Your Benchmark",
+      "source": "Portfolio Analysis",
+      "time": "3 days ago",
       "sentiment": "negative",
-      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
-      "impact": 65
+      "categories": ["Energy", "Sector Performance", "Benchmarking"],
+      "impact": 67
     },
     {
       "id": 4,
-      "title": "Housing Market Shows Signs of Cooling",
-      "source": "CNBC",
-      "time": "8 hours ago",
+      "title": "New Tax Documents Available",
+      "source": "Account Services",
+      "time": "4 days ago",
       "sentiment": "neutral",
-      "categories": ["Real Estate", "Housing", "Economy"],
-      "impact": 58
-    },
-    {
-      "id": 5,
-      "title": "Retail Sales Decline for Second Consecutive Month",
-      "source": "Reuters",
-      "time": "10 hours ago",
-      "sentiment": "negative",
-      "categories": ["Retail", "Consumer Spending", "Economy"],
+      "categories": ["Taxes", "Documentation", "Account Management"],
       "impact": 63
-    },
-    {
-      "id": 6,
-      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
-      "source": "CoinDesk",
-      "time": "12 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
-      "impact": 55
     }
   ],
   "personalmonth": [
     {
       "id": 1,
-      "title": "Fed Signals Potential Rate Cut in September",
-      "source": "Financial Times",
-      "time": "2 hours ago",
+      "title": "Monthly Portfolio Performance: +6.2%",
+      "source": "Monthly Statement",
+      "time": "Last week",
       "sentiment": "positive",
-      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
-      "impact": 85
+      "categories": ["Portfolio Performance", "Monthly Recap"],
+      "impact": 94
     },
     {
       "id": 2,
-      "title": "Tech Stocks Rally as Earnings Beat Expectations",
-      "source": "Wall Street Journal",
-      "time": "4 hours ago",
-      "sentiment": "positive",
-      "categories": ["Technology", "Earnings", "Stock Market"],
-      "impact": 72
+      "title": "Retirement Contribution Limit Reached",
+      "source": "Account Manager",
+      "time": "2 weeks ago",
+      "sentiment": "neutral",
+      "categories": ["Retirement", "Contributions", "Account Limits"],
+      "impact": 79
     },
     {
       "id": 3,
-      "title": "Oil Prices Drop Amid Global Demand Concerns",
-      "source": "Bloomberg",
-      "time": "6 hours ago",
-      "sentiment": "negative",
-      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
-      "impact": 65
+      "title": "Quarterly Rebalancing Recommended",
+      "source": "Portfolio Advisor",
+      "time": "3 weeks ago",
+      "sentiment": "neutral",
+      "categories": ["Rebalancing", "Asset Allocation", "Portfolio Management"],
+      "impact": 86
     },
     {
       "id": 4,
-      "title": "Housing Market Shows Signs of Cooling",
-      "source": "CNBC",
-      "time": "8 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Real Estate", "Housing", "Economy"],
-      "impact": 58
-    },
-    {
-      "id": 5,
-      "title": "Retail Sales Decline for Second Consecutive Month",
-      "source": "Reuters",
-      "time": "10 hours ago",
+      "title": "International Exposure Underweight",
+      "source": "Strategy Alert",
+      "time": "3 weeks ago",
       "sentiment": "negative",
-      "categories": ["Retail", "Consumer Spending", "Economy"],
-      "impact": 63
-    },
-    {
-      "id": 6,
-      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
-      "source": "CoinDesk",
-      "time": "12 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
-      "impact": 55
+      "categories": ["International Markets", "Asset Allocation", "Risk Management"],
+      "impact": 72
     }
   ],
   "marketday": [
@@ -196,172 +192,128 @@
       "id": 1,
       "title": "Fed Signals Potential Rate Cut in September",
       "source": "Financial Times",
-      "time": "2 hours ago",
+      "time": "1 hour ago",
       "sentiment": "positive",
       "categories": ["Federal Reserve", "Interest Rates", "Economy"],
-      "impact": 85
+      "impact": 89
     },
     {
       "id": 2,
       "title": "Tech Stocks Rally as Earnings Beat Expectations",
       "source": "Wall Street Journal",
-      "time": "4 hours ago",
+      "time": "3 hours ago",
       "sentiment": "positive",
       "categories": ["Technology", "Earnings", "Stock Market"],
-      "impact": 72
+      "impact": 78
     },
     {
       "id": 3,
       "title": "Oil Prices Drop Amid Global Demand Concerns",
       "source": "Bloomberg",
-      "time": "6 hours ago",
+      "time": "5 hours ago",
       "sentiment": "negative",
       "categories": ["Oil & Gas", "Commodities", "Global Economy"],
-      "impact": 65
+      "impact": 69
     },
     {
       "id": 4,
       "title": "Housing Market Shows Signs of Cooling",
       "source": "CNBC",
-      "time": "8 hours ago",
+      "time": "7 hours ago",
       "sentiment": "neutral",
       "categories": ["Real Estate", "Housing", "Economy"],
-      "impact": 58
-    },
-    {
-      "id": 5,
-      "title": "Retail Sales Decline for Second Consecutive Month",
-      "source": "Reuters",
-      "time": "10 hours ago",
-      "sentiment": "negative",
-      "categories": ["Retail", "Consumer Spending", "Economy"],
-      "impact": 63
-    },
-    {
-      "id": 6,
-      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
-      "source": "CoinDesk",
-      "time": "12 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
-      "impact": 55
+      "impact": 62
     }
   ],
   "marketweek": [
     {
       "id": 1,
-      "title": "Fed Signals Potential Rate Cut in September",
-      "source": "Financial Times",
-      "time": "2 hours ago",
+      "title": "S&P 500 Posts Best Week of the Year",
+      "source": "Market Watch",
+      "time": "Yesterday",
       "sentiment": "positive",
-      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
-      "impact": 85
+      "categories": ["Indexes", "Stock Market", "Weekly Recap"],
+      "impact": 91
     },
     {
       "id": 2,
-      "title": "Tech Stocks Rally as Earnings Beat Expectations",
-      "source": "Wall Street Journal",
-      "time": "4 hours ago",
+      "title": "Central Banks Globally Signal Dovish Shift",
+      "source": "Economist",
+      "time": "2 days ago",
       "sentiment": "positive",
-      "categories": ["Technology", "Earnings", "Stock Market"],
-      "impact": 72
+      "categories": ["Central Banks", "Monetary Policy", "Global Economy"],
+      "impact": 85
     },
     {
       "id": 3,
-      "title": "Oil Prices Drop Amid Global Demand Concerns",
-      "source": "Bloomberg",
-      "time": "6 hours ago",
-      "sentiment": "negative",
-      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
-      "impact": 65
+      "title": "Major Semiconductor Merger Announced",
+      "source": "Reuters",
+      "time": "3 days ago",
+      "sentiment": "neutral",
+      "categories": ["Semiconductors", "Mergers & Acquisitions", "Technology"],
+      "impact": 77
     },
     {
       "id": 4,
-      "title": "Housing Market Shows Signs of Cooling",
-      "source": "CNBC",
-      "time": "8 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Real Estate", "Housing", "Economy"],
-      "impact": 58
-    },
-    {
-      "id": 5,
-      "title": "Retail Sales Decline for Second Consecutive Month",
-      "source": "Reuters",
-      "time": "10 hours ago",
+      "title": "Retail Sales Data Disappoints Analysts",
+      "source": "Bloomberg",
+      "time": "4 days ago",
       "sentiment": "negative",
-      "categories": ["Retail", "Consumer Spending", "Economy"],
-      "impact": 63
-    },
-    {
-      "id": 6,
-      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
-      "source": "CoinDesk",
-      "time": "12 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
-      "impact": 55
+      "categories": ["Retail", "Economic Data", "Consumer Spending"],
+      "impact": 71
     }
   ],
-  "marketmonthnews": [
+  "marketmonth": [
     {
       "id": 1,
-      "title": "Fed Signals Potential Rate Cut in September",
+      "title": "Markets Cap Best Month Since 2020",
       "source": "Financial Times",
-      "time": "2 hours ago",
+      "time": "Last week",
       "sentiment": "positive",
-      "categories": ["Federal Reserve", "Interest Rates", "Economy"],
-      "impact": 85
+      "categories": ["Stock Market", "Performance", "Monthly Recap"],
+      "impact": 95
     },
     {
       "id": 2,
-      "title": "Tech Stocks Rally as Earnings Beat Expectations",
+      "title": "AI Sector Leads Market Gains with 15% Surge",
       "source": "Wall Street Journal",
-      "time": "4 hours ago",
+      "time": "2 weeks ago",
       "sentiment": "positive",
-      "categories": ["Technology", "Earnings", "Stock Market"],
-      "impact": 72
+      "categories": ["Artificial Intelligence", "Technology", "Sector Performance"],
+      "impact": 88
     },
     {
       "id": 3,
-      "title": "Oil Prices Drop Amid Global Demand Concerns",
-      "source": "Bloomberg",
-      "time": "6 hours ago",
-      "sentiment": "negative",
-      "categories": ["Oil & Gas", "Commodities", "Global Economy"],
-      "impact": 65
+      "title": "Treasury Yields Hit Six-Month Low",
+      "source": "CNBC",
+      "time": "3 weeks ago",
+      "sentiment": "neutral",
+      "categories": ["Bonds", "Treasury", "Interest Rates"],
+      "impact": 79
     },
     {
       "id": 4,
-      "title": "Housing Market Shows Signs of Cooling",
-      "source": "CNBC",
-      "time": "8 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Real Estate", "Housing", "Economy"],
-      "impact": 58
-    },
-    {
-      "id": 5,
-      "title": "Retail Sales Decline for Second Consecutive Month",
-      "source": "Reuters",
-      "time": "10 hours ago",
+      "title": "Commercial Real Estate Faces Mounting Pressure",
+      "source": "Bloomberg",
+      "time": "4 weeks ago",
       "sentiment": "negative",
-      "categories": ["Retail", "Consumer Spending", "Economy"],
-      "impact": 63
-    },
-    {
-      "id": 6,
-      "title": "Cryptocurrency Market Stabilizes After Volatile Week",
-      "source": "CoinDesk",
-      "time": "12 hours ago",
-      "sentiment": "neutral",
-      "categories": ["Cryptocurrency", "Bitcoin", "Digital Assets"],
-      "impact": 55
+      "categories": ["Real Estate", "Commercial Property", "Market Stress"],
+      "impact": 74
     }
   ],
   "sentiment": [
     { "name": "Positive", "value": 2, "color": "#22c55e" },
     { "name": "Neutral", "value": 2, "color": "#f59e0b" },
+    { "name": "Negative", "value": 2, "color": "#ef4444" }
+  ],
+  "personalSentiment": [
+    { "name": "Positive", "value": 4, "color": "#22c55e" },
+    { "name": "Neutral", "value": 2, "color": "#f59e0b" },
+    { "name": "Negative", "value": 1, "color": "#ef4444" }
+  ],
+  "marketSentiment": [
+    { "name": "Positive", "value": 3, "color": "#22c55e" },
+    { "name": "Neutral", "value": 1, "color": "#f59e0b" },
     { "name": "Negative", "value": 2, "color": "#ef4444" }
   ],
   "networknodes": [
@@ -381,5 +333,40 @@
     { "source": "Housing", "target": "Economy", "value": 5 },
     { "source": "Retail", "target": "Economy", "value": 6 },
     { "source": "Crypto", "target": "Stocks", "value": 4 }
+  ],
+  "personalNetworknodes": [
+    { "id": "Portfolio", "group": 1 },
+    { "id": "Stocks", "group": 2 },
+    { "id": "Bonds", "group": 3 },
+    { "id": "Dividends", "group": 4 },
+    { "id": "Taxes", "group": 5 },
+    { "id": "Retirement", "group": 6 },
+    { "id": "RiskLevel", "group": 7 }
+  ],
+  "personalNetworklinks": [
+    { "source": "Portfolio", "target": "Stocks", "value": 9 },
+    { "source": "Portfolio", "target": "Bonds", "value": 7 },
+    { "source": "Stocks", "target": "Dividends", "value": 8 },
+    { "source": "Stocks", "target": "Taxes", "value": 6 },
+    { "source": "Portfolio", "target": "Retirement", "value": 9 },
+    { "source": "Portfolio", "target": "RiskLevel", "value": 8 }
+  ],
+  "marketNetworknodes": [
+    { "id": "Fed", "group": 1 },
+    { "id": "Tech", "group": 2 },
+    { "id": "Oil", "group": 3 },
+    { "id": "Housing", "group": 4 },
+    { "id": "Retail", "group": 5 },
+    { "id": "Crypto", "group": 6 },
+    { "id": "Economy", "group": 7 },
+    { "id": "Stocks", "group": 2 }
+  ],
+  "marketNetworklinks": [
+    { "source": "Fed", "target": "Economy", "value": 9 },
+    { "source": "Tech", "target": "Stocks", "value": 8 },
+    { "source": "Oil", "target": "Economy", "value": 7 },
+    { "source": "Housing", "target": "Economy", "value": 6 },
+    { "source": "Retail", "target": "Economy", "value": 7 },
+    { "source": "Crypto", "target": "Stocks", "value": 5 }
   ]
 }

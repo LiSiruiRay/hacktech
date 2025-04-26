@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts"
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip as UITooltip,
@@ -14,19 +14,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
+// Define types
+type DataSource = "personal" | "market";
+type TimePeriod = "day" | "week" | "month";
 
-// either displays personal porfolio data or market data based on the type prop
+// Updated props interface
 interface MarketOverviewProps {
-  type: "personal" | "market"
+  dataSource: DataSource;
+  onDataSourceChange: (value: string) => void;
 }
-// add Typescript interfaces for the data structures from the JSON
-// a data point in the chart. /personal and /market return like this.
-interface DataPoint{
+
+// Data point interface for chart data
+interface DataPoint {
   name: string;
   value: number;
 }
-// describes one stock, used for top performers section
-interface StockData{
+
+// Stock data interface
+interface StockData {
   id: number;
   symbol: string;
   name: string;
@@ -34,66 +39,109 @@ interface StockData{
   change: number;
   changePercent: number;
 }
-export function MarketOverview({ type }: MarketOverviewProps) {
-  // stores data points for the graph -- personal or market
+
+export function MarketOverview({ dataSource, onDataSourceChange }: MarketOverviewProps) {
+  // Local state for time period
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("day");
+  // State for chart data and stock data
   const [chartData, setChartData] = useState<DataPoint[]>([]);
-  // stores list of stocks, for top performers section
   const [stockData, setStockData] = useState<StockData[]>([]);
-  // whether the api fetching is in progress
+  // Loading and error states
   const [loading, setLoading] = useState(true);
-  // if we get an error we shld know what it is and show it 
   const [error, setError] = useState<string | null>(null);
 
-  // run once page renders, to get the data
+  // Function to handle time period change
+  const handleTimePeriodChange = (value: string) => {
+    setTimePeriod(value as TimePeriod);
+  };
+
+  // Effect to fetch data based on dataSource and timePeriod
   useEffect(() => {
     async function fetchData() {
-      try{
-        // dynamically decide which endpoint to hit based on prop
-        const endpoint = type === "personal" ? "personal" : "market";
-        // fetch both datasets at once for efficiency
+      try {
+        setLoading(true);
+
+        // create endpoint with proper capitalization based on the API
+        // data source -- market or personal, time period -- day week month
+        const chartEndpoint = `${dataSource}${timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)}`;
+        const stockEndpoint = "stock";
+
+        console.log(`Fetching from: ${chartEndpoint}, ${stockEndpoint}`);
+
+        // Fetch data
         const [chartResponse, stockResponse] = await Promise.all([
-          fetch(`http://localhost:3001/${endpoint}`),
-          fetch(`http://localhost:3001/stock`)
+          fetch(`http://localhost:3001/${chartEndpoint}`),
+          fetch(`http://localhost:3001/${stockEndpoint}`)
         ]);
+
         if (!chartResponse.ok || !stockResponse.ok) {
-          throw new Error("Failed to fetch data");
+          throw new Error(`Failed to fetch data from ${chartEndpoint} or ${stockEndpoint}`);
         }
+        
         const chartData = await chartResponse.json();
         const stockData = await stockResponse.json();
+        
         setChartData(chartData);
         setStockData(stockData);
-      }
-      catch (err) {
-        setError("Error loading market or stock data");
+        setError(null);
+      } catch (err) {
         console.error(err);
+        setError("Error loading market or stock data");
       } finally {
         setLoading(false);
       }
     }
+
     fetchData();
-  }, [type]); // [type]: re-fetch if user switches between "personal" and "market"
+  }, [dataSource, timePeriod]);
+
   if (loading) {
     return <div className="p-4 text-center">Loading data...</div>;
   }
-  
+
   if (error) {
     return <div className="p-4 text-center text-red-500">{error}</div>;
   }
 
-  const title = type === "personal" ? "Portfolio Performance" : "Market Performance"
+  // Determine title based on data source
+  const title = dataSource === "personal" ? "Portfolio Performance" : "Market Performance";
   
-  // chart data
+  // Generate timeframe text based on time period
+  const timeframeText = timePeriod === "day" ? "today" : 
+                       timePeriod === "week" ? "this week" : 
+                       "this month";
+
+  // Calculate metrics for display
   const latestData = chartData[chartData.length - 1];
-  const previousData = chartData[chartData.length - 2];
+  const firstData = chartData[0]; // Use the first data point instead of the second-to-last
   const value = latestData ? `$${latestData.value.toLocaleString()}` : "-";
-  const percentChange = previousData
-  ? ((latestData.value - previousData.value) / previousData.value) * 100
-  : 0;
+  const percentChange = firstData
+    ? ((latestData.value - firstData.value) / firstData.value) * 100
+    : 0;
   const change = `${percentChange >= 0 ? "+" : ""}${percentChange.toFixed(1)}%`;
   const isPositive = percentChange >= 0;
 
   return (
     <div className="space-y-6">
+      {/* Toggles section */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+        <Tabs value={dataSource} onValueChange={onDataSourceChange} className="w-auto">
+          <TabsList className="grid grid-cols-2 w-64">
+            <TabsTrigger value="personal">My Portfolio</TabsTrigger>
+            <TabsTrigger value="market">Market Overview</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <Tabs value={timePeriod} onValueChange={handleTimePeriodChange} className="w-auto">
+          <TabsList className="grid grid-cols-3 w-48">
+            <TabsTrigger value="day">Day</TabsTrigger>
+            <TabsTrigger value="week">Week</TabsTrigger>
+            <TabsTrigger value="month">Month</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Content section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border border-border/50 shadow-md overflow-hidden">
           <CardContent className="p-0">
@@ -101,7 +149,9 @@ export function MarketOverview({ type }: MarketOverviewProps) {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-muted-foreground">{title}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {`${title} (${timeframeText})`}
+                    </p>
                     <TooltipProvider>
                       <UITooltip>
                         <TooltipTrigger asChild>
@@ -111,7 +161,7 @@ export function MarketOverview({ type }: MarketOverviewProps) {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Performance over the last 7 months</p>
+                          <p>Performance over the selected time period</p>
                         </TooltipContent>
                       </UITooltip>
                     </TooltipProvider>
@@ -130,7 +180,6 @@ export function MarketOverview({ type }: MarketOverviewProps) {
             </div>
             <div className="h-[250px] mt-2">
               <ResponsiveContainer width="100%" height="100%">
-                {/*add some padding at the left so it doesn't look cramped at 5figs*/}
                 <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -182,5 +231,5 @@ export function MarketOverview({ type }: MarketOverviewProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

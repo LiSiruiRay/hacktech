@@ -1,3 +1,6 @@
+"use client"
+
+import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MarketOverview } from "@/components/market-overview"
@@ -10,7 +13,24 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
+// Define types for our data source
+type DataSource = "personal" | "market"
+
 export default function Dashboard() {
+  // State management for toggling between different views
+  const [marketDataSource, setMarketDataSource] = useState<DataSource>("personal")
+  const [newsDataSource, setNewsDataSource] = useState<DataSource>("personal")
+  
+  // Function to handle market data source change
+  const handleMarketDataSourceChange = (value: string) => {
+    setMarketDataSource(value as DataSource)
+  }
+
+  // Function to handle news data source change
+  const handleNewsDataSourceChange = (value: string) => {
+    setNewsDataSource(value as DataSource)
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       {/* Left sidebar for portfolio - desktop */}
@@ -71,18 +91,7 @@ export default function Dashboard() {
               <CardDescription className="text-muted-foreground">Track market performance and your portfolio</CardDescription>
             </CardHeader>
             <CardContent className="pt-5">
-              <Tabs defaultValue="personal">
-                <TabsList className="mb-5 w-full md:w-auto">
-                  <TabsTrigger value="personal">My Portfolio</TabsTrigger>
-                  <TabsTrigger value="market">Market Overview</TabsTrigger>
-                </TabsList>
-                <TabsContent value="personal" className="mt-0">
-                  <MarketOverview type="personal" />
-                </TabsContent>
-                <TabsContent value="market" className="mt-0">
-                  <MarketOverview type="market" />
-                </TabsContent>
-              </Tabs>
+              <MarketOverview dataSource={marketDataSource} onDataSourceChange={handleMarketDataSourceChange} />
             </CardContent>
           </Card>
 
@@ -94,7 +103,10 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="pt-5 pb-0">
               <div className="h-[600px] md:h-[750px] overflow-auto">
-                <NewsAnalysis />
+                <NewsAnalysis
+                  defaultDataSource={newsDataSource}
+                  onDataSourceChange={handleNewsDataSourceChange}
+                />
               </div>
             </CardContent>
           </Card>

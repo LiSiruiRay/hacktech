@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, ZoomIn, ZoomOut, Move } from 'lucide-react';
+import { ZoomIn, ZoomOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { NetworkNode, NetworkLink, EventPredictionGraphProps } from "@/types";
-
+import { NetworkNode, NetworkLink } from "@/types";
 
 // Define TypeScript interfaces
 interface Event {
@@ -28,6 +27,14 @@ interface ViewBox {
   y: number;
   width: number;
   height: number;
+}
+
+// Enhanced EventPredictionGraphProps to include data source and time period
+interface EventPredictionGraphProps {
+  networkNodes: NetworkNode[];
+  networkLinks: NetworkLink[];
+  dataSource?: "personal" | "market";
+  timePeriod?: "day" | "week" | "month";
 }
 
 // Define animation keyframes for ripple effect
@@ -59,33 +66,105 @@ const pulseKeyframes = `
 }
 `;
 
-const EventPredictionGraph = ({ networkNodes, networkLinks }: EventPredictionGraphProps) => {
+const EventPredictionGraph = ({ 
+  networkNodes, 
+  networkLinks, 
+  dataSource = "personal", 
+  timePeriod = "day" 
+}: EventPredictionGraphProps) => {
   const { theme } = useTheme();
   // if dark mode -- boolean tracker to change colors
   const isDarkMode = theme === 'dark';
   
-  // Sample data for demonstration
-  const [events, setEvents] = useState<Event[]>([
-    { id: '1', title: 'Market Crash', description: 'Stock market crashed by 5%', x: 100, y: 100, happened: true },
-    { id: '2', title: 'Interest Rate Hike', description: 'Central bank raised interest rates', x: 400, y: 150, happened: true },
-    { id: '3', title: 'Company Bankruptcy', description: 'Major tech company files for bankruptcy', x: 200, y: 300, happened: true },
-    { id: '4', title: 'Currency Devaluation', description: 'Currency loses 10% of its value', x: 500, y: 400, happened: false },
-    { id: '5', title: 'Mass Layoffs', description: 'Unemployment rises across sectors', x: 300, y: 500, happened: false },
-    { id: '6', title: 'Housing Market Decline', description: 'Property values drop by 15%', x: 700, y: 300, happened: false },
-  ]);
+  // Generate events based on the dataSource
+  // This illustrates how we'd generate different events for market vs personal
+  const generateEvents = () => {
+    if (dataSource === "personal") {
+      return [
+        { id: '1', title: 'Portfolio Rebalance', description: 'Quarterly rebalancing of your portfolio', x: 100, y: 100, happened: true },
+        { id: '2', title: 'Dividend Income', description: 'Received dividend payments', x: 400, y: 150, happened: true },
+        { id: '3', title: 'Stock Split', description: 'Major stock in your portfolio split 4:1', x: 200, y: 300, happened: true },
+        { id: '4', title: 'Tax Implications', description: 'Potential tax implications for gains', x: 500, y: 400, happened: false },
+        { id: '5', title: 'Upcoming Earnings', description: 'Several holdings report earnings next week', x: 300, y: 500, happened: false },
+        { id: '6', title: 'Risk Assessment', description: 'Portfolio volatility increasing', x: 700, y: 300, happened: false },
+      ];
+    } else {
+      return [
+        { id: '1', title: 'Market Crash', description: 'Stock market crashed by 5%', x: 100, y: 100, happened: true },
+        { id: '2', title: 'Interest Rate Hike', description: 'Central bank raised interest rates', x: 400, y: 150, happened: true },
+        { id: '3', title: 'Company Bankruptcy', description: 'Major tech company files for bankruptcy', x: 200, y: 300, happened: true },
+        { id: '4', title: 'Currency Devaluation', description: 'Currency loses 10% of its value', x: 500, y: 400, happened: false },
+        { id: '5', title: 'Mass Layoffs', description: 'Unemployment rises across sectors', x: 300, y: 500, happened: false },
+        { id: '6', title: 'Housing Market Decline', description: 'Property values drop by 15%', x: 700, y: 300, happened: false },
+      ];
+    }
+  };
 
-  const [connections, setConnections] = useState<Connection[]>([
-    // Relationships between happened events (solid lines with labels)
-    { from: '1', to: '2', id: 'r1', label: 'Triggered', relationship: true },
-    { from: '2', to: '3', id: 'r2', label: 'Caused', relationship: true },
-    { from: '1', to: '3', id: 'r3', label: 'Accelerated', relationship: true },
-    
-    // Predictions (dotted lines)
-    { from: '1', to: '4', id: 'p1', relationship: false },
-    { from: '2', to: '5', id: 'p2', relationship: false },
-    { from: '3', to: '6', id: 'p3', relationship: false },
-    { from: '1', to: '5', id: 'p4', relationship: false },
-  ]);
+  // Generate connections based on the dataSource
+  const generateConnections = () => {
+    if (dataSource === "personal") {
+      return [
+        // Relationships between happened events (solid lines with labels)
+        { from: '1', to: '2', id: 'r1', label: 'Improved', relationship: true },
+        { from: '2', to: '3', id: 'r2', label: 'Boosted', relationship: true },
+        { from: '1', to: '3', id: 'r3', label: 'Enhanced', relationship: true },
+        
+        // Predictions (dotted lines)
+        { from: '1', to: '4', id: 'p1', relationship: false },
+        { from: '2', to: '5', id: 'p2', relationship: false },
+        { from: '3', to: '6', id: 'p3', relationship: false },
+        { from: '1', to: '5', id: 'p4', relationship: false },
+      ];
+    } else {
+      return [
+        // Relationships between happened events (solid lines with labels)
+        { from: '1', to: '2', id: 'r1', label: 'Triggered', relationship: true },
+        { from: '2', to: '3', id: 'r2', label: 'Caused', relationship: true },
+        { from: '1', to: '3', id: 'r3', label: 'Accelerated', relationship: true },
+        
+        // Predictions (dotted lines)
+        { from: '1', to: '4', id: 'p1', relationship: false },
+        { from: '2', to: '5', id: 'p2', relationship: false },
+        { from: '3', to: '6', id: 'p3', relationship: false },
+        { from: '1', to: '5', id: 'p4', relationship: false },
+      ];
+    }
+  };
+
+  // Modify the number of visible events based on the timePeriod
+  const adjustEventsForTimePeriod = (events: Event[], period: string) => {
+    // This is a simple example - you could make more complex adjustments
+    if (period === 'day') {
+      // For day view, show only 5 events (remove the last one)
+      return events.slice(0, 5);
+    } else if (period === 'week') {
+      // For week view, show all events
+      return events;
+    } else {
+      // For month view, show all events and modify one to simulate longer timeframe
+      const modifiedEvents = [...events];
+      if (modifiedEvents.length > 0) {
+        modifiedEvents[0] = {
+          ...modifiedEvents[0],
+          title: `${period.charAt(0).toUpperCase() + period.slice(1)}ly ${modifiedEvents[0].title}`,
+          description: `Long-term ${modifiedEvents[0].description.toLowerCase()}`
+        };
+      }
+      return modifiedEvents;
+    }
+  };
+  
+  // Sample data for demonstration
+  const [events, setEvents] = useState<Event[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
+
+  // Update events and connections when dataSource or timePeriod changes
+  useEffect(() => {
+    const baseEvents = generateEvents();
+    const adjustedEvents = adjustEventsForTimePeriod(baseEvents, timePeriod);
+    setEvents(adjustedEvents);
+    setConnections(generateConnections());
+  }, [dataSource, timePeriod]);
 
   // For animation of predicted events
   const [visiblePredictions, setVisiblePredictions] = useState<string[]>([]);
@@ -115,6 +194,9 @@ const EventPredictionGraph = ({ networkNodes, networkLinks }: EventPredictionGra
 
   // Animate the predicted events to appear one by one
   useEffect(() => {
+    // Reset visible predictions when events change
+    setVisiblePredictions([]);
+    
     const predictedEvents = events.filter(event => !event.happened).map(event => event.id);
     
     let timeoutIds: NodeJS.Timeout[] = [];
@@ -149,123 +231,6 @@ const EventPredictionGraph = ({ networkNodes, networkLinks }: EventPredictionGra
       x: x1 + dx * ratio,
       y: y1 + dy * ratio
     };
-  };
-
-  // Function to draw connections between events
-  const renderConnections = () => {
-    return connections.map(connection => {
-      const fromEvent = getEventById(connection.from);
-      const toEvent = getEventById(connection.to);
-      
-      if (!fromEvent || !toEvent) return null;
-      
-      // Calculate the line endpoints (center of each event node)
-      const x1 = fromEvent.x + 90; // Adjusted for larger nodes
-      const y1 = fromEvent.y + 60; // ^
-      const x2 = toEvent.x + 90;   // ^
-      const y2 = toEvent.y + 60;   // ^
-      
-      // Calculate the endpoint with offset to place arrow at the end
-      const endpoint = calculateEndpoint(x1, y1, x2, y2, 25);
-      
-      // Calculate angle for the arrow rotation
-      const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
-      
-      // Determine if this connection is to a predicted event
-      const isPrediction = !connection.relationship;
-      const isVisible = !isPrediction || 
-                        (isPrediction && 
-                         toEvent && 
-                         !toEvent.happened && 
-                         visiblePredictions.includes(toEvent.id));
-      
-      if (!isVisible) return null;
-      
-      // Generate unique IDs for the animation elements
-      const pulseId = `pulse-${connection.id}`;
-      const rippleId = `ripple-${connection.id}`;
-      
-      return (
-        <g key={connection.id} className={`transition-opacity duration-1000 ${isPrediction ? 'opacity-80' : 'opacity-100'}`}>
-          {/* Line between events */}
-          <line 
-            x1={x1} 
-            y1={y1} 
-            x2={endpoint.x} 
-            y2={endpoint.y} 
-            stroke={isPrediction ? "#888" : "#333"} 
-            strokeWidth={isPrediction ? "2" : "3"}
-            strokeDasharray={isPrediction ? "5,5" : "none"}
-            className={isPrediction ? "animate-pulse" : ""}
-          />
-          
-          {/* Arrow at the end of the line */}
-          <g transform={`translate(${endpoint.x}, ${endpoint.y}) rotate(${angle})`}>
-            <polygon 
-              points="0,0 -10,-5 -10,5" 
-              fill={isPrediction ? "#888" : "#333"} 
-            />
-          </g>
-          
-          {/* Animated pulse effect for connections */}
-          {isPrediction && (
-            <>
-              <circle 
-                cx={x1} 
-                cy={y1} 
-                r="4" 
-                fill="#888" 
-                opacity="0.6"
-                style={{
-                  animation: 'pulse 2s infinite ease-in-out',
-                }}
-              />
-              
-              <circle 
-                cx={endpoint.x} 
-                cy={endpoint.y} 
-                r="4" 
-                fill="#888" 
-                opacity="0.6"
-                style={{
-                  animation: 'pulse 2s infinite ease-in-out',
-                  animationDelay: '1s'
-                }}
-              />
-            </>
-          )}
-          
-          {/* Relationship label (only for relationship connections) */}
-          {connection.relationship && connection.label && (
-            <g className="pointer-events-none">
-              {/* Label background with improved contrast */}
-              <rect
-                x={(x1 + endpoint.x) / 2 - 45}
-                y={(y1 + endpoint.y) / 2 - 12}
-                width="90"
-                height="24"
-                fill="white"
-                stroke="#555"
-                strokeWidth="1"
-                rx="4"
-                filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.2))"
-              />
-              {/* Label text with improved contrast */}
-              <text
-                x={(x1 + endpoint.x) / 2}
-                y={(y1 + endpoint.y) / 2 + 5}
-                textAnchor="middle"
-                fill="#333"
-                fontSize="12"
-                fontWeight="medium"
-              >
-                {connection.label}
-              </text>
-            </g>
-          )}
-        </g>
-      );
-    });
   };
 
   // Zoom functions
@@ -334,7 +299,9 @@ const EventPredictionGraph = ({ networkNodes, networkLinks }: EventPredictionGra
         {pulseKeyframes}
       </style>
       
-      <h1 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Event Prediction Network</h1>
+      <h1 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
+        {dataSource === "personal" ? "Portfolio" : "Market"} Event Prediction Network ({timePeriod})
+      </h1>
       
       <div className="flex mb-4 gap-4 flex-wrap">
         <div className="flex items-center">
@@ -421,10 +388,6 @@ const EventPredictionGraph = ({ networkNodes, networkLinks }: EventPredictionGra
                                visiblePredictions.includes(toEvent.id));
             
             if (!isVisible) return null;
-            
-            // Generate unique IDs for the animation elements
-            const pulseId = `pulse-${connection.id}`;
-            const rippleId = `ripple-${connection.id}`;
             
             return (
               <g key={connection.id} className={`transition-opacity duration-1000 ${isPrediction ? 'opacity-80' : 'opacity-100'}`}>

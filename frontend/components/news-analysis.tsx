@@ -5,37 +5,85 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
 import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react"
-import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" // import the graph
+import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" 
 import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// define time period type
+// Define time period type
 type TimePeriod = "day" | "week" | "month"
-// Define props interface with optional timePeriod
+// Define view type
+type ViewType = "list" | "pie" | "graph"
+// Define data source type
+type DataSource = "personal" | "market"
+
+// Define props interface with optional parameters
 interface NewsAnalysisProps {
-  defaultTimePeriod?: TimePeriod
+  defaultDataSource?: DataSource;
+  onDataSourceChange?: (value: string) => void;
 }
 
-export function NewsAnalysis() {
-  const [viewType, setViewType] = useState<"list" | "pie" | "graph">("list")
-  const [newsData, setNewsData] = useState<NewsData[]>([]);
-  const [sentimentData, setSentimentData] = useState<SentimentData[]>([]);
-  const [networkNodes, setNetworkNodes] = useState<NetworkNode[]>([]);
-  const [networkLinks, setNetworkLinks] = useState<NetworkLink[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function NewsAnalysis({ 
+  defaultDataSource = "personal",
+  onDataSourceChange
+}: NewsAnalysisProps) {
+  // State management
+  const [viewType, setViewType] = useState<ViewType>("list")
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("day")
+  const [dataSource, setDataSource] = useState<DataSource>(defaultDataSource)
+  const [newsData, setNewsData] = useState<NewsData[]>([])
+  const [sentimentData, setSentimentData] = useState<SentimentData[]>([])
+  const [networkNodes, setNetworkNodes] = useState<NetworkNode[]>([])
+  const [networkLinks, setNetworkLinks] = useState<NetworkLink[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
+  // Handle data source change
+  const handleDataSourceChange = (value: string) => {
+    setDataSource(value as DataSource);
+    if (onDataSourceChange) {
+      onDataSourceChange(value);
+    }
+  };
+
+  // Handle time period change
+  const handleTimePeriodChange = (value: string) => {
+    setTimePeriod(value as TimePeriod);
+  };
+
+  // Effect to fetch data based on dataSource and timePeriod
   useEffect(() => {
     async function fetchData() {
       try {
+        setLoading(true)
+        
+        // Construct the endpoints based on dataSource and timePeriod
+        // Keep lowercase for news endpoints which match your db.json structure
+        const newsEndpoint = `${dataSource}${timePeriod}`
+        const sentimentEndpoint = `${dataSource}Sentiment`
+        const nodesEndpoint = `${dataSource}Networknodes`
+        const linksEndpoint = `${dataSource}Networklinks`
+
+        console.log(`Fetching from: ${newsEndpoint}, ${sentimentEndpoint}, ${nodesEndpoint}, ${linksEndpoint}`);
+
+        // Fetch data
         const [newsResponse, sentimentResponse, nodesResponse, linksResponse] = await Promise.all([
-          fetch('http://localhost:3001/news'),
-          fetch('http://localhost:3001/sentiment'),
-          fetch('http://localhost:3001/networknodes'),
-          fetch('http://localhost:3001/networklinks')
+          fetch(`http://localhost:3001/${newsEndpoint}`),
+          fetch(`http://localhost:3001/${sentimentEndpoint}`),
+          fetch(`http://localhost:3001/${nodesEndpoint}`),
+          fetch(`http://localhost:3001/${linksEndpoint}`)
         ]);
   
-        if (!newsResponse.ok || !sentimentResponse.ok || !nodesResponse.ok || !linksResponse.ok) {
-          throw new Error('Failed to fetch one or more datasets');
+        if (!newsResponse.ok) {
+          throw new Error(`Failed to fetch news data from ${newsEndpoint}`);
+        }
+        if (!sentimentResponse.ok) {
+          throw new Error(`Failed to fetch sentiment data from ${sentimentEndpoint}`);
+        }
+        if (!nodesResponse.ok) {
+          throw new Error(`Failed to fetch network nodes from ${nodesEndpoint}`);
+        }
+        if (!linksResponse.ok) {
+          throw new Error(`Failed to fetch network links from ${linksEndpoint}`);
         }
   
         const news = await newsResponse.json();
@@ -47,17 +95,24 @@ export function NewsAnalysis() {
         setSentimentData(sentiment);
         setNetworkNodes(nodes);
         setNetworkLinks(links);
+        setError(null);
   
       } catch (err) {
         console.error(err);
-        setError('Error loading financial data.');
+        setError(`Error loading financial data: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         setLoading(false);
       }
     }
   
     fetchData();
-  }, []);
+  }, [dataSource, timePeriod]); // Re-fetch when dataSource or timePeriod changes
+  
+  // Update local state when prop changes
+  useEffect(() => {
+    setDataSource(defaultDataSource);
+  }, [defaultDataSource]);
+  
   if (loading) {
     return <div className="p-4 text-center">Loading financial data...</div>;
   }
@@ -66,7 +121,7 @@ export function NewsAnalysis() {
     return <div className="p-4 text-center text-red-500">{error}</div>;
   }
   
-  
+  // Helper function for sentiment icons
   const getSentimentIcon = (sentiment: string) => {
     switch (sentiment) {
       case "positive":
@@ -78,6 +133,7 @@ export function NewsAnalysis() {
     }
   }
 
+  // Helper function for sentiment colors
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case "positive":
@@ -89,13 +145,49 @@ export function NewsAnalysis() {
     }
   }
 
+  // Generate title and timeframe text
+  const title = dataSource === "personal" ? "Portfolio" : "Market";
+  const timeframeText = timePeriod === "day" ? "today" : 
+                        timePeriod === "week" ? "this week" : 
+                        "this month";
+
   return (
     <div className="space-y-5">
-      {/* Top section: header + view toggles */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">
-          Financial News Impact
-        </h3>
+      {/* Title */}
+      <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">
+        {`${title} News Impact (${timeframeText})`}
+      </h3>
+      
+      {/* Top section: toggles */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div className="flex flex-wrap gap-4">
+          {/* Data source toggle */}
+          <Tabs 
+            value={dataSource} 
+            onValueChange={handleDataSourceChange}
+            className="w-auto"
+          >
+            <TabsList className="grid grid-cols-2 w-52">
+              <TabsTrigger value="personal">My Portfolio</TabsTrigger>
+              <TabsTrigger value="market">Market</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          {/* Time period toggle */}
+          <Tabs 
+            value={timePeriod} 
+            onValueChange={handleTimePeriodChange}
+            className="w-auto"
+          >
+            <TabsList className="grid grid-cols-3 w-48">
+              <TabsTrigger value="day">Day</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
+              <TabsTrigger value="month">Month</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        
+        {/* View type toggle */}
         <div className="flex space-x-1 border rounded-md overflow-hidden border-slate-200 dark:border-slate-700">
           <button
             onClick={() => setViewType("list")}
@@ -192,6 +284,7 @@ export function NewsAnalysis() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
+              <RechartsTooltip />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -204,11 +297,12 @@ export function NewsAnalysis() {
             <EventPredictionGraph
               networkNodes={networkNodes}
               networkLinks={networkLinks}
+              dataSource={dataSource}
+              timePeriod={timePeriod}
             />
           </div>
         </div>
       )}
     </div>
   );
-  
 }
