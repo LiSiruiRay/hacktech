@@ -196,8 +196,10 @@ export function NewsAnalysis() {
                 data={sentimentData}
                 cx="50%"
                 cy="50%"
-                labelLine={true}
-                outerRadius={150}
+                labelLine={false}
+                outerRadius={120}
+                innerRadius={60}
+                paddingAngle={5}
                 fill="#8884d8"
                 dataKey="value"
                 label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
@@ -206,7 +208,8 @@ export function NewsAnalysis() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <RechartsTooltip contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }} />
+              {/* removed recharts tooltip bc the hover looks stupid */}
+              {/* it's interactive tho so maybe add it back later with better dark/light mode support and actually useful info instead of what is already shown */}
             </PieChart>
           </ResponsiveContainer>
         </div>

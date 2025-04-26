@@ -99,7 +99,12 @@ export function MarketOverview({ type }: MarketOverviewProps) {
                       <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    vertical={false} 
+                    stroke="var(--border)" 
+                    opacity={0.5} 
+                  />
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
@@ -111,7 +116,12 @@ export function MarketOverview({ type }: MarketOverviewProps) {
         </Card>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Top Performers</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Top Performers</h3>
+            <Button variant="outline" size="sm">
+              View All
+            </Button>
+          </div>
           <div className="space-y-2">
             {stockData.map((stock) => (
               <div key={stock.symbol} className="flex items-center justify-between p-3 border rounded-lg">
