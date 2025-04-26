@@ -6,20 +6,20 @@ import { NewsAnalysis } from "@/components/news-analysis"
 
 export default function Dashboard() {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       {/* Left sidebar for portfolio */}
       <div className="hidden md:block w-80 border-r p-4 overflow-auto">
         <PortfolioSidebar />
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b p-4">
+      <div className="flex-1 flex flex-col overflow-auto">
+        <header className="border-b p-4 sticky top-0 bg-background z-20">
           <h1 className="text-2xl font-bold">Financial Advisor Dashboard</h1>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 space-y-4">
-          {/* Stock market section (top right) */}
+        <div className="flex-1 p-4 space-y-4">
+          {/* Stock market section (top) */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>Market Overview</CardTitle>
@@ -41,14 +41,16 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* News analysis section (bottom right) */}
-          <Card>
+          {/* News analysis section (bottom) - now larger with scrolling */}
+          <Card className="min-h-[800px]">
             <CardHeader className="pb-2">
               <CardTitle>News Analysis</CardTitle>
               <CardDescription>Financial news and market sentiment</CardDescription>
             </CardHeader>
             <CardContent>
-              <NewsAnalysis />
+              <div className="h-[700px] overflow-auto">
+                <NewsAnalysis />
+              </div>
             </CardContent>
           </Card>
         </div>
