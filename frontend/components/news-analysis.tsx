@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
 import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react"
-import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" // import the graph component for display in graph view
+import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated"
+import { WcagComplianceInfo } from "@/components/wcag-compliance-info"
 
 // Mock news data
 const newsData = [
@@ -147,6 +148,7 @@ export function NewsAnalysis() {
         </div>
       </div>
 
+      {/* View content sections */}
       {viewType === "list" && (
         <div className="space-y-3 flex-1 overflow-y-auto pr-1 scrollbar-thin">
           {newsData.map((news) => (
@@ -218,6 +220,11 @@ export function NewsAnalysis() {
           </div>
         </div>
       )}
+      
+      {/* WCAG Compliance Info component */}
+      <div className="mt-auto pt-4">
+        <WcagComplianceInfo />
+      </div>
     </div>
   )
 }
