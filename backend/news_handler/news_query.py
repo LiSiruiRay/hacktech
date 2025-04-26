@@ -1,13 +1,14 @@
 import os
 import hashlib
 import requests
-import newspaper
+import pytz
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from news import News, Event
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import AgglomerativeClustering
 from openai import OpenAI
+
 
 load_dotenv()
 
@@ -37,10 +38,16 @@ client = OpenAI(api_key = openai_api_key)
     
 def data_to_news(data): 
     news_list = []
+    utc = pytz.utc
+    pacific = pytz.timezone('America/Los_Angeles')
 
     for idx, article in enumerate(data["feed"]):
+        post_time_utc = datetime.strptime(article.get("time_published"), "%Y%m%dT%H%M%S")
+        post_time_utc = utc.localize(post_time_utc)
+        post_time_pacific = post_time_utc.astimezone(pacific)
+        
         news = News(
-            post_time = article.get("time_published"),
+            post_time = post_time_pacific.strftime("%Y%m%dT%H%M"),
             title = article.get("title"),
             link = article.get("url"),
             summary = article.get("summary")
@@ -90,37 +97,50 @@ def hash_event_label(labels, news_list):
     return events
 
 
-def real_time_query(time_range, max_clusters=5, max_words=150):
-    if time_range == "day": 
-       time = timedelta(days=1)
-    elif time_range == "week": 
-        time = timedelta(weeks=1)
-    elif time_range == "month": 
-        time = timedelta(days=30) 
+def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
+    if time_range == "day":
+        days_to_query = 1
+        daily_limit = 1000
+    elif time_range == "week":
+        days_to_query = 7
+        daily_limit = 200
+    elif time_range == "month":
+        days_to_query = 30
+        daily_limit = 33
     else: 
-        raise ValueError("Invalid time range.")        
+        raise ValueError("Invalid time range.")   
     
-    start_date = (datetime.now() - time).strftime("%Y%m%dT%H%M")
+    all_news_list = []     
     
-    url = f'https://www.alphavantage.co/query?function=NEWS_SENTIMENT&time_from={start_date}&limit=30000&apikey={alpha_vantage_api_key}'
-    r = requests.get(url)
-    data = r.json()
+    for day_offset in range(days_to_query):
+        end_day = (datetime.now() - timedelta(days = day_offset - 1)).strftime("%Y%m%dT%H%M")
+        start_day = (datetime.now() - timedelta(days=day_offset)).strftime("%Y%m%dT%H%M")
+        if keywords == []:
+            url = f'https://www.alphavantage.co/query?function=NEWS_SENTIMENT&time_from={start_day}&time_to={end_day}&limit={daily_limit}&apikey={alpha_vantage_api_key}'
+        else:
+            tickers = ",".join(keywords)
+            url = f'https://www.alphavantage.co/query?function=NEWS_SENTIMENT&time_from={start_day}&time_to={end_day}&tickers={tickers}&limit={daily_limit}&apikey={alpha_vantage_api_key}'
+        
+        r = requests.get(url)
+        data = r.json()
     
-    news_list = data_to_news(data)
-    
-    if not news_list: 
+        news_list = data_to_news(data)
+        all_news_list.extend(news_list)
+        
+    if not all_news_list: 
         return []
     
-    labels = cluster(news_list, max_clusters=5)
+    labels = cluster(all_news_list, max_clusters= max_clusters)
         
-    events = get_summary(hash_event_label(labels, news_list), max_words=150)
+    events = get_summary(hash_event_label(labels, all_news_list), max_words=max_words)
     
     # for label, event in events.items():
     #     print(f"\nCluster {label}:")
     #     for news in event.news_list:
     #         print(f"  - {news.title}")
     
-    total_news = len(news_list)
+    total_news = len(all_news_list)
+    print(total_news)
     result = []
     for event in events.values():
         percentage = int(100 * len(event.news_list) / total_news)
@@ -134,9 +154,7 @@ def real_time_query(time_range, max_clusters=5, max_words=150):
         })
 
     return result
-    
-    
         
     
 if __name__ == "__main__":
-   print(real_time_query("week"))
+   print(real_time_query("week", ["AAPL", "TSLA"]))
