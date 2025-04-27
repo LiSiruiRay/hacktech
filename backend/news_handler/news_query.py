@@ -4,7 +4,7 @@ import requests
 import pytz
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from news import News, Event
+from news_handler.news import News, Event
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import AgglomerativeClustering
 from openai import OpenAI
