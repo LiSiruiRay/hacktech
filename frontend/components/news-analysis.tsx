@@ -1,100 +1,127 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
 import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" 
+import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Mock news data
-const newsData = [
-  {
-    id: 1,
-    title: "Fed Signals Potential Rate Cut in September",
-    source: "Financial Times",
-    time: "2 hours ago",
-    sentiment: "positive",
-    categories: ["Federal Reserve", "Interest Rates", "Economy"],
-    impact: 85,
-  },
-  {
-    id: 2,
-    title: "Tech Stocks Rally as Earnings Beat Expectations",
-    source: "Wall Street Journal",
-    time: "4 hours ago",
-    sentiment: "positive",
-    categories: ["Technology", "Earnings", "Stock Market"],
-    impact: 72,
-  },
-  {
-    id: 3,
-    title: "Oil Prices Drop Amid Global Demand Concerns",
-    source: "Bloomberg",
-    time: "6 hours ago",
-    sentiment: "negative",
-    categories: ["Oil & Gas", "Commodities", "Global Economy"],
-    impact: 65,
-  },
-  {
-    id: 4,
-    title: "Housing Market Shows Signs of Cooling",
-    source: "CNBC",
-    time: "8 hours ago",
-    sentiment: "neutral",
-    categories: ["Real Estate", "Housing", "Economy"],
-    impact: 58,
-  },
-  {
-    id: 5,
-    title: "Retail Sales Decline for Second Consecutive Month",
-    source: "Reuters",
-    time: "10 hours ago",
-    sentiment: "negative",
-    categories: ["Retail", "Consumer Spending", "Economy"],
-    impact: 63,
-  },
-  {
-    id: 6,
-    title: "Cryptocurrency Market Stabilizes After Volatile Week",
-    source: "CoinDesk",
-    time: "12 hours ago",
-    sentiment: "neutral",
-    categories: ["Cryptocurrency", "Bitcoin", "Digital Assets"],
-    impact: 55,
-  },
-]
+// Define time period type
+type TimePeriod = "day" | "week" | "month"
+// Define view type
+type ViewType = "list" | "pie" | "graph"
+// Define data source type
+type DataSource = "personal" | "market"
 
-// Data for pie chart
-const sentimentData = [
-  { name: "Positive", value: 2, color: "#22c55e" },
-  { name: "Neutral", value: 2, color: "#f59e0b" },
-  { name: "Negative", value: 2, color: "#ef4444" },
-]
+// Define props interface with optional parameters
+interface NewsAnalysisProps {
+  defaultDataSource?: DataSource;
+  onDataSourceChange?: (value: string) => void;
+}
 
-// Data for network graph (simplified for this example)
-const networkNodes = [
-  { id: "Fed", group: 1 },
-  { id: "Tech", group: 2 },
-  { id: "Oil", group: 3 },
-  { id: "Housing", group: 4 },
-  { id: "Retail", group: 5 },
-  { id: "Crypto", group: 6 },
-  { id: "Economy", group: 7 },
-  { id: "Stocks", group: 2 },
-]
+export function NewsAnalysis({ 
+  defaultDataSource = "personal",
+  onDataSourceChange
+}: NewsAnalysisProps) {
+  // State management
+  const [viewType, setViewType] = useState<ViewType>("list")
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("day")
+  const [dataSource, setDataSource] = useState<DataSource>(defaultDataSource)
+  const [newsData, setNewsData] = useState<NewsData[]>([])
+  const [sentimentData, setSentimentData] = useState<SentimentData[]>([])
+  const [networkNodes, setNetworkNodes] = useState<NetworkNode[]>([])
+  const [networkLinks, setNetworkLinks] = useState<NetworkLink[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-const networkLinks = [
-  { source: "Fed", target: "Economy", value: 8 },
-  { source: "Tech", target: "Stocks", value: 7 },
-  { source: "Oil", target: "Economy", value: 6 },
-  { source: "Housing", target: "Economy", value: 5 },
-  { source: "Retail", target: "Economy", value: 6 },
-  { source: "Crypto", target: "Stocks", value: 4 },
-]
+  // Handle data source change
+  const handleDataSourceChange = (value: string) => {
+    setDataSource(value as DataSource);
+    if (onDataSourceChange) {
+      onDataSourceChange(value);
+    }
+  };
 
-export function NewsAnalysis() {
-  const [viewType, setViewType] = useState<"list" | "pie" | "graph">("list")
+  // Handle time period change
+  const handleTimePeriodChange = (value: string) => {
+    setTimePeriod(value as TimePeriod);
+  };
 
+  // Effect to fetch data based on dataSource and timePeriod
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        
+        // Construct the endpoints based on dataSource and timePeriod
+        // Keep lowercase for news endpoints which match your db.json structure
+        const newsEndpoint = `${dataSource}${timePeriod}`
+        const sentimentEndpoint = `${dataSource}Sentiment`
+        const nodesEndpoint = `${dataSource}Networknodes`
+        const linksEndpoint = `${dataSource}Networklinks`
+
+        console.log(`Fetching from: ${newsEndpoint}, ${sentimentEndpoint}, ${nodesEndpoint}, ${linksEndpoint}`);
+
+        // Fetch data
+        const [newsResponse, sentimentResponse, nodesResponse, linksResponse] = await Promise.all([
+          fetch(`http://localhost:3001/${newsEndpoint}`),
+          fetch(`http://localhost:3001/${sentimentEndpoint}`),
+          fetch(`http://localhost:3001/${nodesEndpoint}`),
+          fetch(`http://localhost:3001/${linksEndpoint}`)
+        ]);
+  
+        if (!newsResponse.ok) {
+          throw new Error(`Failed to fetch news data from ${newsEndpoint}`);
+        }
+        if (!sentimentResponse.ok) {
+          throw new Error(`Failed to fetch sentiment data from ${sentimentEndpoint}`);
+        }
+        if (!nodesResponse.ok) {
+          throw new Error(`Failed to fetch network nodes from ${nodesEndpoint}`);
+        }
+        if (!linksResponse.ok) {
+          throw new Error(`Failed to fetch network links from ${linksEndpoint}`);
+        }
+  
+        const news = await newsResponse.json();
+        const sentiment = await sentimentResponse.json();
+        const nodes = await nodesResponse.json();
+        const links = await linksResponse.json();
+  
+        setNewsData(news);
+        setSentimentData(sentiment);
+        setNetworkNodes(nodes);
+        setNetworkLinks(links);
+        setError(null);
+  
+      } catch (err) {
+        console.error(err);
+        setError(`Error loading financial data: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        setLoading(false);
+      }
+    }
+  
+    fetchData();
+  }, [dataSource, timePeriod]); // Re-fetch when dataSource or timePeriod changes
+  
+  // Update local state when prop changes
+  useEffect(() => {
+    setDataSource(defaultDataSource);
+  }, [defaultDataSource]);
+  
+  if (loading) {
+    return <div className="p-4 text-center">Loading financial data...</div>;
+  }
+  
+  if (error) {
+    return <div className="p-4 text-center text-red-500">{error}</div>;
+  }
+  
+  // Helper function for sentiment icons
   const getSentimentIcon = (sentiment: string) => {
     switch (sentiment) {
       case "positive":
@@ -106,6 +133,7 @@ export function NewsAnalysis() {
     }
   }
 
+  // Helper function for sentiment colors
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case "positive":
@@ -117,44 +145,95 @@ export function NewsAnalysis() {
     }
   }
 
+  // Generate title and timeframe text
+  const title = dataSource === "personal" ? "Portfolio" : "Market";
+  const timeframeText = timePeriod === "day" ? "today" : 
+                        timePeriod === "week" ? "this week" : 
+                        "this month";
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Financial News Impact</h3>
-        <div className="flex space-x-1 border rounded-md">
+    <div className="space-y-5">
+      {/* Title */}
+      <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">
+        {`${title} News Impact (${timeframeText})`}
+      </h3>
+      
+      {/* Top section: toggles */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div className="flex flex-wrap gap-4">
+          {/* Data source toggle */}
+          <Tabs 
+            value={dataSource} 
+            onValueChange={handleDataSourceChange}
+            className="w-auto"
+          >
+            <TabsList className="grid grid-cols-2 w-52">
+              <TabsTrigger value="personal">My Portfolio</TabsTrigger>
+              <TabsTrigger value="market">Market</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          {/* Time period toggle */}
+          <Tabs 
+            value={timePeriod} 
+            onValueChange={handleTimePeriodChange}
+            className="w-auto"
+          >
+            <TabsList className="grid grid-cols-3 w-48">
+              <TabsTrigger value="day">Day</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
+              <TabsTrigger value="month">Month</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        
+        {/* View type toggle */}
+        <div className="flex space-x-1 border rounded-md overflow-hidden border-slate-200 dark:border-slate-700">
           <button
             onClick={() => setViewType("list")}
-            className={`p-1.5 ${viewType === "list" ? "bg-muted" : ""}`}
+            className={`p-2 transition-colors ${
+              viewType === "list" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+            }`}
             aria-label="List view"
           >
             <List className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewType("pie")}
-            className={`p-1.5 ${viewType === "pie" ? "bg-muted" : ""}`}
+            className={`p-2 transition-colors ${
+              viewType === "pie" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+            }`}
             aria-label="Pie chart view"
           >
             <PieChartIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewType("graph")}
-            className={`p-1.5 ${viewType === "graph" ? "bg-muted" : ""}`}
+            className={`p-2 transition-colors ${
+              viewType === "graph" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+            }`}
             aria-label="Relational graph view"
           >
             <Network className="h-4 w-4" />
           </button>
         </div>
       </div>
-
+  
+      {/* Main content based on viewType */}
       {viewType === "list" && (
-        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+        <div className="space-y-3 h-full overflow-y-auto pr-1">
           {newsData.map((news) => (
-            <Card key={news.id} className="hover:bg-accent/50 cursor-pointer transition-colors">
+            <Card
+              key={news.id}
+              className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30"
+            >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5">{getSentimentIcon(news.sentiment)}</div>
+                  <div className="mt-0.5 bg-primary/10 dark:bg-primary/20 p-2 rounded-full">
+                    {getSentimentIcon(news.sentiment)}
+                  </div>
                   <div className="flex-1">
-                    <h4 className="font-medium">{news.title}</h4>
+                    <h4 className="font-medium text-slate-800 dark:text-slate-100">{news.title}</h4>
                     <div className="flex items-center text-xs text-muted-foreground mt-1">
                       <span>{news.source}</span>
                       <span className="mx-2">•</span>
@@ -183,7 +262,8 @@ export function NewsAnalysis() {
           ))}
         </div>
       )}
-
+  
+      {/* Pie chart view */}
       {viewType === "pie" && (
         <div className="h-[400px] flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
@@ -192,8 +272,10 @@ export function NewsAnalysis() {
                 data={sentimentData}
                 cx="50%"
                 cy="50%"
-                labelLine={true}
-                outerRadius={150}
+                labelLine={false}
+                outerRadius={120}
+                innerRadius={60}
+                paddingAngle={5}
                 fill="#8884d8"
                 dataKey="value"
                 label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
@@ -207,18 +289,20 @@ export function NewsAnalysis() {
           </ResponsiveContainer>
         </div>
       )}
-
+  
+      {/* Graph view */}
       {viewType === "graph" && (
-        <div className="h-[400px] flex items-center justify-center bg-muted/50 rounded-lg">
-          <div className="text-center p-6">
-            <Network className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium">News Relationship Graph</h3>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
-              This view shows how different news topics are related to each other and their impact on financial markets.
-            </p>
+        <div className="h-full overflow-hidden rounded-lg">
+          <div className="h-full">
+            <EventPredictionGraph
+              networkNodes={networkNodes}
+              networkLinks={networkLinks}
+              dataSource={dataSource}
+              timePeriod={timePeriod}
+            />
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
