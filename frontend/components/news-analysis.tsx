@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
@@ -72,15 +72,33 @@ export function NewsAnalysis({
   const [apiEvents, setApiEvents] = useState<NewsEvent[]>([])
   const [apiPredictions, setPredictions] = useState<Prediction[]>([])
   
-  // State for expanded news
+  // State for expanded UI elements
   const [expandedNewsIds, setExpandedNewsIds] = useState<number[]>([])
+  const [expandedContentIds, setExpandedContentIds] = useState<number[]>([])
+  const [expandedPredictionIds, setExpandedPredictionIds] = useState<number[]>([])
 
-  // Toggle news expansion
+  // Toggle expansion functions
   const toggleNewsExpansion = (newsId: number) => {
     if (expandedNewsIds.includes(newsId)) {
       setExpandedNewsIds(expandedNewsIds.filter(id => id !== newsId));
     } else {
       setExpandedNewsIds([...expandedNewsIds, newsId]);
+    }
+  };
+
+  const toggleContentExpansion = (eventId: number) => {
+    if (expandedContentIds.includes(eventId)) {
+      setExpandedContentIds(expandedContentIds.filter(id => id !== eventId));
+    } else {
+      setExpandedContentIds([...expandedContentIds, eventId]);
+    }
+  };
+
+  const togglePredictionExpansion = (predictionIdx: number) => {
+    if (expandedPredictionIds.includes(predictionIdx)) {
+      setExpandedPredictionIds(expandedPredictionIds.filter(id => id !== predictionIdx));
+    } else {
+      setExpandedPredictionIds([...expandedPredictionIds, predictionIdx]);
     }
   };
   
@@ -102,6 +120,11 @@ export function NewsAnalysis({
     try {
       setLoading(true);
       
+      // Reset expanded states when fetching new data
+      setExpandedNewsIds([]);
+      setExpandedContentIds([]);
+      setExpandedPredictionIds([]);
+      
       // Construct the API endpoint using the updated parameter name
       const endpoint = `http://localhost:5001/api/${dataSource}/predict-from-news?time_period=${timePeriod}&limit=5`;
       
@@ -116,6 +139,20 @@ export function NewsAnalysis({
       const data: ApiResponse = await response.json();
       
       console.log("API response:", data);
+      console.log("Predictions received:", data.predictions ? data.predictions.length : 0);
+      
+      // Validate data to ensure we don't display empty content
+      if (!data.events || data.events.length === 0) {
+        throw new Error("No events received from API");
+      }
+      
+      // Check for empty summaries and log them
+      const emptySummaries = data.events.filter(event => 
+        !event.event_content || event.event_content === "Summary not available."
+      );
+      if (emptySummaries.length > 0) {
+        console.warn(`Found ${emptySummaries.length} events with empty summaries`);
+      }
       
       // Update state with API data
       setApiEvents(data.events || []);
@@ -133,10 +170,25 @@ export function NewsAnalysis({
     }
   };
   
+  // Extract a title from event content
+  const extractTitle = useCallback((content: string): string => {
+    if (!content || content === "Summary not available.") {
+      return "News Cluster";
+    }
+    
+    // Take first sentence or first 50 characters
+    const firstSentence = content.split(/[.!?]/).filter(s => s.trim().length > 0)[0];
+    if (firstSentence && firstSentence.length <= 100) {
+      return firstSentence.trim();
+    }
+    // If first sentence is too long, take first 100 chars
+    return content.length > 100 ? content.substring(0, 97) + '...' : content;
+  }, []);
+  
   // Convert API data to format needed for visualization components
-  const convertApiDataToComponents = (data: ApiResponse) => {
+  const convertApiDataToComponents = useCallback((data: ApiResponse) => {
     // Convert events to NewsData format for list view
-    const newsItems: NewsData[] = data.events.map((event, index) => {
+    const newsItems: NewsData[] = data.events.map((event) => {
       // Generate random sentiment for demo purposes
       // In a real app, you would get this from the API
       const sentiments = ["positive", "negative", "neutral"];
@@ -144,7 +196,8 @@ export function NewsAnalysis({
       
       return {
         id: event.event_id,
-        title: event.event_content,
+        title: extractTitle(event.event_content), // Use the helper function
+        fullContent: event.event_content, // Store full content
         source: event.news_list.length > 0 ? `News sources: ${event.news_list.length}` : "No sources",
         time: new Date().toLocaleTimeString(),
         sentiment: randomSentiment,
@@ -155,25 +208,22 @@ export function NewsAnalysis({
     
     setNewsData(newsItems);
     
-    // Generate sentiment data for pie chart
-    const sentiments = {
-      positive: 0,
-      negative: 0,
-      neutral: 0
-    };
-    
-    newsItems.forEach(item => {
-      sentiments[item.sentiment as keyof typeof sentiments]++;
-    });
-    
-    const pieData: SentimentData[] = [
-      { name: "Positive", value: sentiments.positive, color: "#10b981" },
-      { name: "Negative", value: sentiments.negative, color: "#ef4444" },
-      { name: "Neutral", value: sentiments.neutral, color: "#f59e0b" },
-    ].filter(item => item.value > 0);
+    // Generate cluster distribution data for pie chart instead of sentiment
+    const pieData: SentimentData[] = data.events.map((event) => {
+      // Generate a consistent color based on event_id
+      const colors = ["#10b981", "#ef4444", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899"];
+      const colorIndex = event.event_id % colors.length;
+      
+      return {
+        name: `Cluster ${event.event_id}`,
+        value: event.impact, // The percentage from the backend
+        color: colors[colorIndex],
+        fullTitle: extractTitle(event.event_content) // Add a full title for tooltips
+      };
+    }).filter(item => item.value > 0);
     
     setSentimentData(pieData);
-    
+      
     // Generate network data for graph view
     const nodes: NetworkNode[] = data.events.map((event) => ({
       id: `event-${event.event_id}`,
@@ -181,28 +231,33 @@ export function NewsAnalysis({
     }));
     
     // Add prediction nodes
-    data.predictions.forEach((prediction, index) => {
-      nodes.push({
-        id: `prediction-${index}`,
-        group: 2 // Predictions in group 2
-      });
-    });
-    
-    // Create links between predictions and their causes
-    const links: NetworkLink[] = [];
-    data.predictions.forEach((prediction, predIndex) => {
-      prediction.cause.forEach(cause => {
-        links.push({
-          source: `event-${cause.event.event_id}`,
-          target: `prediction-${predIndex}`,
-          value: cause.weight
+    if (data.predictions && data.predictions.length > 0) {
+      data.predictions.forEach((prediction, index) => {
+        nodes.push({
+          id: `prediction-${index}`,
+          group: 2 // Predictions in group 2
         });
       });
-    });
+      
+      // Create links between predictions and their causes
+      const links: NetworkLink[] = [];
+      data.predictions.forEach((prediction, predIndex) => {
+        if (prediction.cause && prediction.cause.length > 0) {
+          prediction.cause.forEach(cause => {
+            links.push({
+              source: `event-${cause.event.event_id}`,
+              target: `prediction-${predIndex}`,
+              value: cause.weight
+            });
+          });
+        }
+      });
+      
+      setNetworkLinks(links);
+    }
     
     setNetworkNodes(nodes);
-    setNetworkLinks(links);
-  };
+  }, [extractTitle]);
 
   // Fetch data when parameters change
   useEffect(() => {
@@ -324,75 +379,107 @@ export function NewsAnalysis({
       {viewType === "list" && (
         <div className="space-y-3 h-full overflow-y-auto pr-1">
           {apiEvents.length > 0 ? (
-            apiEvents.map((event) => (
-              <Card
-                key={event.event_id}
-                className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30"
-              >
-                <CardContent className="p-4">
-                  <div 
-                    className="flex items-start gap-3"
-                    onClick={() => toggleNewsExpansion(event.event_id)}
-                  >
-                    <div className="mt-0.5 bg-primary/10 dark:bg-primary/20 p-2 rounded-full">
-                      {getSentimentIcon(newsData.find(n => n.id === event.event_id)?.sentiment || "neutral")}
+            apiEvents.map((event) => {
+              const newsItem = newsData.find(n => n.id === event.event_id);
+              const isContentExpanded = expandedContentIds.includes(event.event_id);
+              
+              return (
+                <Card
+                  key={event.event_id}
+                  className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30"
+                >
+                  <CardContent className="p-4">
+                    <div 
+                      className="flex items-start gap-3"
+                      onClick={() => toggleContentExpansion(event.event_id)}
+                    >
+                      <div className="mt-0.5 bg-primary/10 dark:bg-primary/20 p-2 rounded-full">
+                        {getSentimentIcon(newsItem?.sentiment || "neutral")}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-medium text-slate-800 dark:text-slate-100">
+                            {/* Show title from newsData (extracted title) */}
+                            {newsItem?.title || extractTitle(event.event_content)}
+                          </h4>
+                          {isContentExpanded ? (
+                            <ChevronUp className="h-4 w-4 ml-2 text-slate-500" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 ml-2 text-slate-500" />
+                          )}
+                        </div>
+                        <div className="flex items-center text-xs text-muted-foreground mt-1">
+                          <span>{event.news_list.length > 0 ? `${event.news_list.length} news sources` : "No sources"}</span>
+                          <span className="mx-2">•</span>
+                          <Clock className="h-3 w-3 mr-1" />
+                          <span>Recent</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          <Badge key="news" variant="outline" className="text-xs">
+                            News
+                          </Badge>
+                          <Badge key="finance" variant="outline" className="text-xs">
+                            Finance
+                          </Badge>
+                          <Badge className={`text-xs ${getSentimentColor(newsItem?.sentiment || "neutral")}`}>
+                            {newsItem?.sentiment?.charAt(0).toUpperCase() + 
+                             (newsItem?.sentiment?.slice(1) || "Neutral")}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="secondary" className="font-medium">
+                          {event.impact}% Impact
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium text-slate-800 dark:text-slate-100">{event.event_content}</h4>
-                        {expandedNewsIds.includes(event.event_id) ? (
-                          <ChevronUp className="h-4 w-4 ml-2 text-slate-500" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 ml-2 text-slate-500" />
+                    
+                    {/* Expanded content - show full description*/}
+                    {isContentExpanded && (
+                      <div className="mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-700">
+                        <p className="text-sm text-slate-700 dark:text-slate-300">
+                          {event.event_content}
+                        </p>
+                        
+                        {/* Button to show/hide news */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent content toggle
+                            toggleNewsExpansion(event.event_id);
+                          }}
+                          className="text-xs text-primary hover:text-primary-focus flex items-center mt-2"
+                        >
+                          {expandedNewsIds.includes(event.event_id) ? (
+                            <>Hide news sources <ChevronUp className="h-3 w-3 ml-1" /></>
+                          ) : (
+                            <>View news sources <ChevronDown className="h-3 w-3 ml-1" /></>
+                          )}
+                        </button>
+                        
+                        {/* Expanded news content */}
+                        {expandedNewsIds.includes(event.event_id) && (
+                          <div className="mt-3 pl-4">
+                            <h5 className="font-medium text-sm mb-2">Related News</h5>
+                            {event.news_list.length > 0 ? (
+                              <div className="space-y-3">
+                                {event.news_list.map((news, idx) => (
+                                  <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-md text-sm">
+                                    <h6 className="font-medium mb-1">{news.title}</h6>
+                                    <p className="text-muted-foreground">{news.news_content}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No news articles available for this event.</p>
+                            )}
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center text-xs text-muted-foreground mt-1">
-                        <span>{event.news_list.length > 0 ? `${event.news_list.length} news sources` : "No sources"}</span>
-                        <span className="mx-2">•</span>
-                        <Clock className="h-3 w-3 mr-1" />
-                        <span>Recent</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        <Badge key="news" variant="outline" className="text-xs">
-                          News
-                        </Badge>
-                        <Badge key="finance" variant="outline" className="text-xs">
-                          Finance
-                        </Badge>
-                        <Badge className={`text-xs ${getSentimentColor(newsData.find(n => n.id === event.event_id)?.sentiment || "neutral")}`}>
-                          {newsData.find(n => n.id === event.event_id)?.sentiment?.charAt(0).toUpperCase() + 
-                           (newsData.find(n => n.id === event.event_id)?.sentiment?.slice(1) || "Neutral")}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="secondary" className="font-medium">
-                        {event.impact}% Impact
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  {/* Expanded news content */}
-                  {expandedNewsIds.includes(event.event_id) && (
-                    <div className="mt-4 pl-10 border-t pt-3 border-dashed border-slate-200 dark:border-slate-700">
-                      <h5 className="font-medium text-sm mb-2">Related News</h5>
-                      {event.news_list.length > 0 ? (
-                        <div className="space-y-3">
-                          {event.news_list.map((news, idx) => (
-                            <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-md text-sm">
-                              <h6 className="font-medium mb-1">{news.title}</h6>
-                              <p className="text-muted-foreground">{news.news_content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No news articles available for this event.</p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })
           ) : (
             <div className="p-4 text-center text-muted-foreground">
               No news events found. Try changing the time period or data source.
@@ -403,8 +490,9 @@ export function NewsAnalysis({
   
       {/* Pie chart view */}
       {viewType === "pie" && (
-        <div className="h-[400px] flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-[400px] flex flex-col items-center justify-center">
+          <h4 className="text-sm font-medium mb-4">News Topic Distribution</h4>
+          <ResponsiveContainer width="100%" height="90%">
             <PieChart>
               <Pie
                 data={sentimentData}
@@ -416,15 +504,25 @@ export function NewsAnalysis({
                 paddingAngle={5}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, value }) => `${name}: ${value}%`}
               >
                 {sentimentData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <RechartsTooltip />
+              <RechartsTooltip 
+                formatter={(value, name, props) => {
+                  // Find the corresponding data entry
+                  const entry = sentimentData.find(item => item.name === name);
+                  // Return the percentage and a shorter version of the event content as the name
+                  return [`${value}%`, entry?.fullTitle || name];
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
+          <div className="text-xs text-center text-muted-foreground mt-2">
+            Showing distribution of news articles across topic clusters
+          </div>
         </div>
       )}
   
@@ -447,40 +545,67 @@ export function NewsAnalysis({
             Predicted Outcomes
           </h3>
           <div className="space-y-3">
-            {apiPredictions.map((prediction, index) => (
-              <Card key={index} className="border-l-4 border-l-indigo-500 dark:bg-slate-800/30">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-slate-800 dark:text-slate-100">
-                        {prediction.content}
-                      </h4>
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        {prediction.reason}
-                      </div>
-                      {prediction.cause.length > 0 && (
-                        <div className="mt-3">
-                          <h5 className="text-xs font-medium mb-1">Contributing Factors:</h5>
-                          <div className="space-y-1">
-                            {prediction.cause.map((cause, causeIdx) => (
-                              <div key={causeIdx} className="flex items-center">
-                                <div className="w-8 text-xs font-medium text-slate-500">{cause.weight}%</div>
-                                <div className="flex-1 text-xs truncate">{cause.event.event_content}</div>
-                              </div>
-                            ))}
-                          </div>
+            {apiPredictions.map((prediction, index) => {
+              // Check if this prediction is expanded
+              const isPredictionExpanded = expandedPredictionIds.includes(index);
+              
+              return (
+                <Card 
+                  key={index} 
+                  className="border-l-4 border-l-indigo-500 dark:bg-slate-800/30 hover:bg-accent/50 cursor-pointer transition-colors"
+                  onClick={() => togglePredictionExpansion(index)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-medium text-slate-800 dark:text-slate-100">
+                            {prediction.content}
+                          </h4>
+                          {isPredictionExpanded ? (
+                            <ChevronUp className="h-4 w-4 ml-2 text-slate-500" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 ml-2 text-slate-500" />
+                          )}
                         </div>
-                      )}
+                        
+                        {/* Only show reason and contributing factors when expanded */}
+                        {isPredictionExpanded && (
+                          <>
+                            <div className="mt-3 text-sm text-slate-700 dark:text-slate-300">
+                              {prediction.reason}
+                            </div>
+                            
+                            {prediction.cause.length > 0 && (
+                              <div className="mt-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-md">
+                                <h5 className="text-sm font-medium mb-2">Contributing Factors:</h5>
+                                <div className="space-y-2">
+                                  {prediction.cause.map((cause, causeIdx) => (
+                                    <div key={causeIdx} className="flex items-start">
+                                      <div className="w-10 flex-shrink-0 text-sm font-medium text-slate-600 dark:text-slate-400">
+                                        {cause.weight}%
+                                      </div>
+                                      <div className="flex-1 text-sm text-slate-700 dark:text-slate-300">
+                                        {cause.event.event_content}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className="font-medium">
+                          {prediction.confidence_score}% Confidence
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="font-medium">
-                        {prediction.confidence_score}% Confidence
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}

@@ -1,28 +1,16 @@
 # app.py
 import os
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from event_prediction.event_predictor import EventPredictor, PredictorType
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Union
 from event_prediction.event_predictor import Event, NewsEvent, News, PredictedEventList
 from dotenv import load_dotenv
 import json
 import traceback
-# for caching
-from functools import lru_cache
+import diskcache as dc
 from datetime import datetime, timedelta
-# Add a simple cache dictionary
-cache = {
-    "market": {},
-    "personal": {}
-}
-# Add a function to check cache validity
-def is_cache_valid(cache_time, max_age_minutes=25):
-    """Check if cached data is still valid"""
-    if not cache_time:
-        return False
-    age = datetime.now() - cache_time
-    return age < timedelta(minutes=max_age_minutes)
 
 # Set environment variable to avoid tokenizers warning
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -37,19 +25,58 @@ from news_handler.news_query import real_time_query
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
+# Use disk-based cache for larger responses
+cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
+os.makedirs(cache_dir, exist_ok=True)
+cache = dc.Cache(cache_dir)
+
 # Initialize event predictors for both market and personal predictions
 market_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.PUBLIC)
 personal_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.PRIVATE)
 
-# Helper functions
-def format_news_item(news: News) -> Dict[str, Any]:
-    """Format a news item for API response"""
-    return {
-        "title": news.title,
-        "news_content": news.summary if hasattr(news, 'summary') else news.news_content
-    }
+# Helper function to check cache validity
+def is_cache_valid(cache_time, max_age_minutes=25):
+    """Check if cached data is still valid"""
+    if not cache_time:
+        return False
+    age = datetime.now() - cache_time
+    return age < timedelta(minutes=max_age_minutes)
 
-def format_event_for_response(event, event_id: int, max_news: int = 3) -> Dict[str, Any]:
+# Helper function to get cached data
+def get_cached_data(data_source, cache_key, max_age_minutes=25):
+    """Get data from cache if valid"""
+    full_key = f"{data_source}_{cache_key}"
+    cached_data = cache.get(full_key)
+    if cached_data and is_cache_valid(cached_data.get("timestamp"), max_age_minutes):
+        print(f"Using cached data for {full_key}")
+        return cached_data["data"]
+    return None
+
+# Helper function to store data in cache
+def set_cached_data(data_source, cache_key, data):
+    """Store data in cache with timestamp"""
+    full_key = f"{data_source}_{cache_key}"
+    cache.set(full_key, {
+        "data": data,
+        "timestamp": datetime.now()
+    })
+    print(f"Cached data for {full_key}")
+
+# Helper functions for data formatting
+def format_news_item(news: Union[News, Dict]) -> Dict[str, Any]:
+    """Format a news item for API response"""
+    if isinstance(news, News):
+        return {
+            "title": news.title,
+            "news_content": news.news_content
+        }
+    else:
+        return {
+            "title": news.get("title", ""),
+            "news_content": news.get("summary", "")
+        }
+
+def format_event_for_response(event, event_id: int, max_news: int = 5) -> Dict[str, Any]:
     """Format an event for API response"""
     # Handle different event types (NewsEvent objects vs dictionaries from real_time_query)
     if isinstance(event, NewsEvent):
@@ -101,13 +128,25 @@ def get_news():
         
         limit = request.args.get('limit', default=5, type=int)
         
+        # Check cache first
+        cache_key = f"news_{time_period}_{limit}"
+        cached_data = get_cached_data("general", cache_key)
+        if cached_data:
+            return jsonify(cached_data)
+        
+        # Fetch fresh data if not in cache
         news_results = real_time_query(time_range=time_period)
         news_results = news_results[:limit]
         
         events = [format_event_for_response(event_data["Event"], idx + 1) 
                  for idx, event_data in enumerate(news_results)]
         
-        return jsonify({"events": events})
+        response_data = {"events": events}
+        
+        # Cache the result
+        set_cached_data("general", cache_key, response_data)
+        
+        return jsonify(response_data)
     except Exception as e:
         error_trace = traceback.format_exc()
         print(f"Error in get_news: {str(e)}")
@@ -140,16 +179,20 @@ def predict_from_news(data_source):
         cache_key = f"{time_period}_{limit}"
         
         # Check if we have valid cached data
-        if cache_key in cache[data_source] and is_cache_valid(cache[data_source][cache_key].get("timestamp")):
-            print(f"Using cached data for {data_source}/{cache_key}")
-            return jsonify(cache[data_source][cache_key]["data"])
+        cached_data = get_cached_data(data_source, cache_key)
+        if cached_data:
+            return jsonify(cached_data)
         
         print(f"Predicting from news with data_source={data_source}, time_period={time_period}, limit={limit}")
+        
+        start_time = time.time()
         
         # Fetch news
         news_results = real_time_query(time_range=time_period)
         if not news_results:
             return jsonify({"error": "No news events found"}), 404
+        
+        print(f"News fetch took {time.time() - start_time:.2f}s")
         
         # Limit results
         news_results = news_results[:limit]
@@ -158,27 +201,25 @@ def predict_from_news(data_source):
         news_events = []
         for idx, event_data in enumerate(news_results):
             event = event_data["Event"]
-            # Limit news articles per event and truncate summaries to reduce token usage
             news_list = []
-            for news in event["news_list"][:2]:  # Max 2 news per event
-                # Truncate news content
-                summary = news.summary[:200] if len(news.summary) > 200 else news.summary
+            
+            # Include up to 5 news articles per event
+            for news in event["news_list"][:5]:
                 news_list.append(News(
                     title=news.title,
-                    news_content=summary,
+                    news_content=news.summary,
                     post_time=news.post_time,
                     link=news.link
                 ))
             
-            # Truncate event summary
-            event_content = event["summary"][:200]
             news_events.append(NewsEvent(
                 event_id=idx + 1,
-                event_content=event_content,
+                event_content=event["summary"],
                 news_list=news_list
             ))
         
-        # Get appropriate predictor - always use market_predictor for now
+        prediction_start = time.time()
+        # Get appropriate predictor
         predictor = get_predictor(data_source)
         
         # Generate predictions
@@ -187,16 +228,15 @@ def predict_from_news(data_source):
             num_predictions=3
         )
         
-        # Format response
-        formatted_events = [format_event_for_response(event, event.event_id) for event in news_events]
+        print(f"Prediction took {time.time() - prediction_start:.2f}s")
         
-        # Add impact scores that are deterministic but seem random
-        # Use event_id and content length to generate a pseudo-random but consistent impact
-        for idx, event in enumerate(formatted_events):
-            # Generate a consistent impact score between 1 and 20
-            seed = event["event_id"] + len(event["event_content"])
-            impact = (seed % 20) + 1
-            event["impact"] = impact
+        # Format response
+        formatted_events = []
+        for idx, news_result in enumerate(news_results):
+            event = format_event_for_response(news_events[idx], news_events[idx].event_id, max_news=5)
+            # Use the percentage from news_query as impact
+            event["impact"] = news_result["Percentage"]
+            formatted_events.append(event)
         
         formatted_predictions = [format_prediction_for_response(pred) for pred in predictions.predictions]
         
@@ -206,10 +246,9 @@ def predict_from_news(data_source):
         }
         
         # Cache the results
-        cache[data_source][cache_key] = {
-            "data": response_data,
-            "timestamp": datetime.now()
-        }
+        set_cached_data(data_source, cache_key, response_data)
+        
+        print(f"Total processing took {time.time() - start_time:.2f}s")
         
         return jsonify(response_data)
     except Exception as e:
@@ -436,4 +475,5 @@ def get_sample_data():
     })
 
 if __name__ == "__main__":
+    # Start the Flask app
     app.run(debug=True, host='0.0.0.0', port=5001)
