@@ -601,9 +601,12 @@ export function NewsAnalysis({
             {selectedTopic ? (
               <div className="w-full p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
                 {(() => {
-                  const sig = apiEvents.find(r => 
-                    r.topic.trim().toLowerCase() === selectedTopic.trim().toLowerCase()
-                  )                  
+                  const sig = apiEvents.find(r => {
+                    const eventTopic = (r.topic || "General").trim().toLowerCase();
+                    const selected = (selectedTopic || "").trim().toLowerCase();
+                    return eventTopic === selected || selected.includes(eventTopic);
+                  });
+                                 
                   if (!sig) return <p className="text-sm text-center">No signal for {selectedTopic}</p>
                   return (
                     <>

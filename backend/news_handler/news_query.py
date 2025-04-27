@@ -160,7 +160,7 @@ def hash_event_label(labels, news_list):
 def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
     if time_range == "day":
         days_to_query = 1
-        daily_limit = 1000
+        daily_limit = 2000
     elif time_range == "week":
         days_to_query = 7
         daily_limit = 1000
