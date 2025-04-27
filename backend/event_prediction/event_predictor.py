@@ -1,5 +1,4 @@
 # Author: ray
-# Date: 2/25/25
 # Description: Event predictor for predicting future events based on past events
 
 from enum import Enum

@@ -1,5 +1,4 @@
 # Author: ray
-# Date: 2/25/25
 # Description: Tests for the event predictor
 
 import unittest
