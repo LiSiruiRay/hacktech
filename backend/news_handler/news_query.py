@@ -1,3 +1,4 @@
+# news_query.py
 import os
 import hashlib
 import requests

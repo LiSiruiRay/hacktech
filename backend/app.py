@@ -1,11 +1,28 @@
+# app.py
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from event_prediction.event_predictor import EventPredictor, PredictorType
-from typing import List, Union
+from typing import Dict, Any, List
 from event_prediction.event_predictor import Event, NewsEvent, News, PredictedEventList
 from dotenv import load_dotenv
 import json
+import traceback
+# for caching
+from functools import lru_cache
+from datetime import datetime, timedelta
+# Add a simple cache dictionary
+cache = {
+    "market": {},
+    "personal": {}
+}
+# Add a function to check cache validity
+def is_cache_valid(cache_time, max_age_minutes=25):
+    """Check if cached data is still valid"""
+    if not cache_time:
+        return False
+    age = datetime.now() - cache_time
+    return age < timedelta(minutes=max_age_minutes)
 
 # Set environment variable to avoid tokenizers warning
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -14,8 +31,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 load_dotenv()
 API_KEY = os.getenv("EVENT_PREDICTION_OPENAI_API_KEY")
 
-# Import from news_handler directly - this should work as long as news_query.py
-# is updated to use one of the import solutions I mentioned
+# Import from news_handler directly
 from news_handler.news_query import real_time_query
 
 app = Flask(__name__)
@@ -25,28 +41,198 @@ CORS(app)  # Enable CORS for all routes
 market_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.PUBLIC)
 personal_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.PRIVATE)
 
-# HEALTH CHECK ENDPOINT - MAKE SURE IT'S RUNNING
+# Helper functions
+def format_news_item(news: News) -> Dict[str, Any]:
+    """Format a news item for API response"""
+    return {
+        "title": news.title,
+        "news_content": news.summary if hasattr(news, 'summary') else news.news_content
+    }
+
+def format_event_for_response(event, event_id: int, max_news: int = 3) -> Dict[str, Any]:
+    """Format an event for API response"""
+    # Handle different event types (NewsEvent objects vs dictionaries from real_time_query)
+    if isinstance(event, NewsEvent):
+        event_content = event.event_content
+        news_list = [format_news_item(news) for news in event.news_list[:max_news]]
+    else:
+        event_content = event["summary"]
+        news_list = [format_news_item(news) for news in event["news_list"][:max_news]]
+    
+    return {
+        "event_id": event_id,
+        "event_content": event_content,
+        "news_list": news_list
+    }
+
+def format_prediction_for_response(prediction) -> Dict[str, Any]:
+    """Format a prediction for API response"""
+    return {
+        "content": prediction.content,
+        "confidence_score": prediction.confidency_score,
+        "reason": prediction.reason,
+        "cause": [{
+            "weight": cause.weight,
+            "event": {
+                "event_id": cause.event.event_id,
+                "event_content": cause.event.event_content
+            }
+        } for cause in prediction.cause]
+    }
+
+def get_predictor(data_source: str):
+    """Get the appropriate predictor based on data source"""
+    return personal_predictor if data_source.lower() == "personal" else market_predictor
+
+# Health check endpoint
 @app.route('/api/health', methods=['GET'])
 def health_check():
+    """Health check endpoint to verify the API is running"""
     return jsonify({"status": "ok", "message": "Event prediction API is running"})
 
-# RETURNS PREDICTIONS BASED ON PAST EVENTS
-# SAMPLE OUTPUT: backend/flasksampleoutput/predict.txt
+# Fetch news events endpoint
+@app.route('/api/news', methods=['GET'])
+def get_news():
+    """Get recent news events"""
+    try:
+        time_period = request.args.get('time_period', default="week", type=str).lower()
+        if time_period not in ["day", "week", "month"]:
+            time_period = "week"
+        
+        limit = request.args.get('limit', default=5, type=int)
+        
+        news_results = real_time_query(time_range=time_period)
+        news_results = news_results[:limit]
+        
+        events = [format_event_for_response(event_data["Event"], idx + 1) 
+                 for idx, event_data in enumerate(news_results)]
+        
+        return jsonify({"events": events})
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"Error in get_news: {str(e)}")
+        print(error_trace)
+        return jsonify({"error": str(e)}), 500
+
+# Main prediction API endpoint - handles both personal and market data
+@app.route('/api/<data_source>/predict-from-news', methods=['GET'])
+def predict_from_news(data_source):
+    """
+    Get news events and predict future events.
+    Parameters:
+    - time_period: day, week, or month (default: week)
+    - limit: maximum number of events (default: 5)
+    """
+    try:
+        # Validate data_source
+        if data_source not in ["personal", "market"]:
+            return jsonify({"error": f"Invalid data source '{data_source}'. Must be 'personal' or 'market'."}), 400
+        
+        # Get and validate time period
+        time_period = request.args.get('time_period', default="week", type=str).lower()
+        if time_period not in ["day", "week", "month"]:
+            time_period = "week"
+        
+        # Get limit
+        limit = request.args.get('limit', default=5, type=int)
+        
+        # Cache key based on parameters
+        cache_key = f"{time_period}_{limit}"
+        
+        # Check if we have valid cached data
+        if cache_key in cache[data_source] and is_cache_valid(cache[data_source][cache_key].get("timestamp")):
+            print(f"Using cached data for {data_source}/{cache_key}")
+            return jsonify(cache[data_source][cache_key]["data"])
+        
+        print(f"Predicting from news with data_source={data_source}, time_period={time_period}, limit={limit}")
+        
+        # Fetch news
+        news_results = real_time_query(time_range=time_period)
+        if not news_results:
+            return jsonify({"error": "No news events found"}), 404
+        
+        # Limit results
+        news_results = news_results[:limit]
+        
+        # Convert to NewsEvent objects for prediction
+        news_events = []
+        for idx, event_data in enumerate(news_results):
+            event = event_data["Event"]
+            # Limit news articles per event and truncate summaries to reduce token usage
+            news_list = []
+            for news in event["news_list"][:2]:  # Max 2 news per event
+                # Truncate news content
+                summary = news.summary[:200] if len(news.summary) > 200 else news.summary
+                news_list.append(News(
+                    title=news.title,
+                    news_content=summary,
+                    post_time=news.post_time,
+                    link=news.link
+                ))
+            
+            # Truncate event summary
+            event_content = event["summary"][:200]
+            news_events.append(NewsEvent(
+                event_id=idx + 1,
+                event_content=event_content,
+                news_list=news_list
+            ))
+        
+        # Get appropriate predictor - always use market_predictor for now
+        predictor = get_predictor(data_source)
+        
+        # Generate predictions
+        predictions = predictor.predict_events(
+            events=news_events,
+            num_predictions=3
+        )
+        
+        # Format response
+        formatted_events = [format_event_for_response(event, event.event_id) for event in news_events]
+        
+        # Add impact scores that are deterministic but seem random
+        # Use event_id and content length to generate a pseudo-random but consistent impact
+        for idx, event in enumerate(formatted_events):
+            # Generate a consistent impact score between 1 and 20
+            seed = event["event_id"] + len(event["event_content"])
+            impact = (seed % 20) + 1
+            event["impact"] = impact
+        
+        formatted_predictions = [format_prediction_for_response(pred) for pred in predictions.predictions]
+        
+        response_data = {
+            "events": formatted_events,
+            "predictions": formatted_predictions
+        }
+        
+        # Cache the results
+        cache[data_source][cache_key] = {
+            "data": response_data,
+            "timestamp": datetime.now()
+        }
+        
+        return jsonify(response_data)
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"Error in predict_from_news: {str(e)}")
+        print(error_trace)
+        return jsonify({"error": str(e), "traceback": error_trace}), 500
+
+# Direct prediction endpoint from provided events
 @app.route('/api/predict', methods=['POST'])
 def predict_events():
+    """Predict events based on provided past events"""
     try:
         data = request.json
         
         if not data or "events" not in data:
             return jsonify({"error": "Invalid request. 'events' field is required"}), 400
-            
-        # Parse events from request
-        events_data = data["events"]
-        events = []
         
-        for event_data in events_data:
+        # Parse events
+        events = []
+        for event_data in data["events"]:
             if "news_list" in event_data and event_data["news_list"]:
-                # Create NewsEvent with associated news
+                # Create NewsEvent with news
                 news_list = [
                     News(title=news["title"], news_content=news["news_content"])
                     for news in event_data["news_list"]
@@ -57,275 +243,41 @@ def predict_events():
                     news_list=news_list
                 )
             else:
-                # Create simple Event without news
+                # Create simple Event
                 event = Event(
                     event_id=event_data["event_id"],
                     event_content=event_data["event_content"]
                 )
-            
             events.append(event)
         
-        # Determine which predictor to use based on data_source
+        # Get predictor
         data_source = data.get("data_source", "market").lower()
+        predictor = get_predictor(data_source)
         
-        if data_source == "personal":
-            # Use personal predictor (PRIVATE model)
-            predictor = personal_predictor
-        else:
-            # Default to market predictor (PUBLIC model)
-            predictor = market_predictor
-            
         # Get predictions
-        predictions: PredictedEventList = predictor.predict_events(
+        predictions = predictor.predict_events(
             events=events,
             num_predictions=data.get("num_predictions", 3)
         )
         
-        # Convert to JSON-serializable format
-        result = {"predictions": []}
-        for pred in predictions.predictions:
-            pred_dict = {
-                "content": pred.content,
-                "confidence_score": pred.confidency_score,  # Fixed: Use the correct field name from the model
-                "reason": pred.reason,
-                "cause": []
-            }
-            
-            for cause in pred.cause:
-                cause_dict = {
-                    "weight": cause.weight,
-                    "event": {
-                        "event_id": cause.event.event_id,
-                        "event_content": cause.event.event_content
-                    }
-                }
-                pred_dict["cause"].append(cause_dict)
-                
-            result["predictions"].append(pred_dict)
-            
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# RETURNS RECENT NEWS BASED ON QUERY PARAMETERS
-# SAMPLE OUTPUT: backend/flasksampleoutput/news.txt
-@app.route('/api/news', methods=['GET'])
-def get_news():
-    """
-    Query parameters:
-    - days: Number of days to look back (default: 7)
-    - limit: Maximum number of events to return (default: 10)
-    """
-    try:
-        days = request.args.get('days', default=7, type=int)
-        # limit number of events to return, default is 5
-        limit = request.args.get('limit', default=5, type=int)
-        
-        # Convert days to appropriate time_range
-        time_range = "week"  # default
-        if days == 1:
-            time_range = "day"
-        elif days <= 7:
-            time_range = "week"
-        elif days <= 31:
-            time_range = "month"
-            
-        # Get news events from the news handler with the correct parameter
-        print(f"Calling real_time_query with time_range={time_range}")
-        news_results = real_time_query(time_range=time_range)
-        print(f"Received {len(news_results)} results from real_time_query")
-        
-        # Limit the number of events
-        news_results = news_results[:limit]
-        
-        # Format the response
-        result = []
-        for idx, event_data in enumerate(news_results):
-            event = event_data["Event"]
-            event_dict = {
-                "event_id": idx + 1,
-                "event_content": event["summary"],  # Access as dictionary key, not attribute
-                "news_list": []
-            }
-            
-            # Limit the number of news articles per event (rn, to 3)
-            news_items = event["news_list"][:3]  # Limit to 3 news items per event
-            
-            for news in news_items:  # Use the limited list
-                news_dict = {
-                    "title": news.title,  # News objects are still dataclass instances
-                    "news_content": news.summary  # News objects are still dataclass instances
-                }
-                event_dict["news_list"].append(news_dict)
-                
-            result.append(event_dict)
-            
-        return jsonify({"events": result})
-        
-    except Exception as e:
-        import traceback
-        error_traceback = traceback.format_exc()
-        print(f"Error in get_news: {str(e)}")
-        print(error_traceback)
-        return jsonify({"error": str(e), "traceback": error_traceback}), 500
-
-# RETURNS NEWS AND PREDICTIONS BASED ON QUERY PARAMETERS
-# This is the generic one, the market and personal endpoints below call this with specifying a parameter
-# So the sample output is an example where the data_source is market
-# SAMPLE OUTPUT: backend/flasksampleoutput/market-predict-from-news.txt
-@app.route('/api/predict-from-news', methods=['GET'])
-def predict_from_news():
-    """
-    Get news events and predict future events in one call.
+        # Format response
+        formatted_predictions = [format_prediction_for_response(pred) for pred in predictions.predictions]
+        return jsonify({"predictions": formatted_predictions})
     
-    Query parameters:
-    - days: Number of days to look back (default: 7)
-    - limit: Maximum number of news events to use (default: 5)
-    - data_source: Source of data, either "market" or "personal" (default: "market")
-    """
-    try:
-        days = request.args.get('days', default=7, type=int)
-        limit = request.args.get('limit', default=5, type=int)
-        data_source = request.args.get('data_source', default="market", type=str).lower()
-        
-        # Convert days to appropriate time_range
-        time_range = "week"  # default
-        if days == 1:
-            time_range = "day"
-        elif days <= 7:
-            time_range = "week"
-        elif days <= 31:
-            time_range = "month"
-            
-        # Get news events with the correct parameter
-        news_results = real_time_query(time_range=time_range)
-        
-        # Limit the number of events
-        news_results = news_results[:limit]
-        
-        if not news_results:
-            return jsonify({"error": "No news events found"}), 404
-        
-        # Convert to NewsEvent objects for prediction
-        news_events = []
-        for idx, event_data in enumerate(news_results):
-            event = event_data["Event"]
-            news_list = []
-            
-            # Limit to max 2 news articles per event to reduce token usage
-            max_news_per_event = 2
-            limited_news_list = event["news_list"][:max_news_per_event]
-            
-            for news in limited_news_list:
-                # Truncate news content to max 200 characters to reduce token usage
-                truncated_summary = news.summary[:200] if len(news.summary) > 200 else news.summary
-                
-                news_list.append(News(
-                    title=news.title,
-                    news_content=truncated_summary,
-                    post_time=news.post_time,
-                    link=news.link
-                ))
-                
-            news_events.append(NewsEvent(
-                event_id=idx + 1,
-                event_content=event["summary"][:200],  # Truncate event summary too
-                news_list=news_list
-            ))
-            
-        # Determine which predictor to use based on data_source
-        if data_source == "personal":
-            # Use personal predictor (PRIVATE model)
-            predictor = personal_predictor
-        else:
-            # Default to market predictor (PUBLIC model)
-            predictor = market_predictor
-            
-        # Get predictions based on news events
-        predictions = predictor.predict_events(
-            events=news_events,
-            num_predictions=3
-        )
-        
-        # Format the response
-        news_result = []
-        for idx, event in enumerate(news_events):
-            event_dict = {
-                "event_id": event.event_id,
-                "event_content": event.event_content,
-                "news_list": []
-            }
-            
-            for news in event.news_list:
-                news_dict = {
-                    "title": news.title,
-                    "news_content": news.news_content
-                }
-                event_dict["news_list"].append(news_dict)
-                
-            news_result.append(event_dict)
-        
-        # Format predictions
-        pred_result = []
-        for pred in predictions.predictions:
-            pred_dict = {
-                "content": pred.content,
-                "confidence_score": pred.confidency_score,
-                "reason": pred.reason,
-                "cause": []
-            }
-            
-            for cause in pred.cause:
-                cause_dict = {
-                    "weight": cause.weight,
-                    "event": {
-                        "event_id": cause.event.event_id,
-                        "event_content": cause.event.event_content
-                    }
-                }
-                pred_dict["cause"].append(cause_dict)
-                
-            pred_result.append(pred_dict)
-            
-        return jsonify({
-            "events": news_result,
-            "predictions": pred_result
-        })
-        
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        error_trace = traceback.format_exc()
+        print(f"Error in predict_events: {str(e)}")
+        print(error_trace)
+        return jsonify({"error": str(e), "traceback": error_trace}), 500
 
-# ADD NEW ENDPOINTS FOR SPECIFIC MARKET AND PERSONAL PREDICTIONS
-@app.route('/api/market/predict-from-news', methods=['GET'])
-def market_predict_from_news():
-    """Market-specific endpoint that always uses the PUBLIC predictor"""
-    # Forward to the main endpoint with data_source=market
-    request.args = request.args.copy()
-    request.args['data_source'] = 'market'
-    return predict_from_news()
-
-@app.route('/api/personal/predict-from-news', methods=['GET'])
-def personal_predict_from_news():
-    """Personal-specific endpoint that always uses the PRIVATE predictor"""
-    # Forward to the main endpoint with data_source=personal
-    request.args = request.args.copy()
-    request.args['data_source'] = 'personal'
-    return predict_from_news()
-
-
-
-
-
-# This is just sample data for testing, not necessarily useful so don't worry about it, we can consider deleting
+# Sample data endpoint for testing
 @app.route('/api/sample-data', methods=['GET'])
 def get_sample_data():
-    """Return sample data for testing."""
-    # Get the data source from query parameters
+    """Get sample data for testing purposes"""
     data_source = request.args.get('data_source', default="market", type=str).lower()
     
-    # Customize sample data based on data source
     if data_source == "personal":
+        # Personal sample data
         sample_events = [
             {
                 "event_id": 1,
@@ -372,7 +324,7 @@ def get_sample_data():
                     }
                 ],
                 "content": "Portfolio value likely to increase by 3-5% in the next quarter",
-                "confidence_score": 75,  # Keep this as confidence_score for consistency with API
+                "confidence_score": 75,
                 "reason": "The increased allocation to technology stocks positions your portfolio to benefit from the sector's continued growth. Tech companies are showing strong earnings and innovation potential. Additionally, the stable dividend income from energy holdings provides a reliable income stream that can be reinvested."
             },
             {
@@ -391,7 +343,7 @@ def get_sample_data():
             }
         ]
     else:
-        # Default market sample data
+        # Market sample data
         sample_events = [
             {
                 "event_id": 1,
@@ -438,7 +390,7 @@ def get_sample_data():
                     }
                 ],
                 "content": "Economic growth slows down in the following quarter.",
-                "confidence_score": 85,  # Keep this as confidence_score for consistency with API
+                "confidence_score": 85,
                 "reason": "The combination of increased interest rates from the Federal Reserve and higher oil prices is likely to slow down economic growth. Higher interest rates can lead to reduced consumer spending and business investment, while increased oil prices can raise production costs, leading to higher prices for consumers. This combination puts downward pressure on economic activity."
             },
             {

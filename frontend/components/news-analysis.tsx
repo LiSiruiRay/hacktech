@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
-import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from "lucide-react"
 import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" 
 import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +15,37 @@ type TimePeriod = "day" | "week" | "month"
 type ViewType = "list" | "pie" | "graph"
 // Define data source type
 type DataSource = "personal" | "market"
+
+// Define updated API types
+interface NewsItem {
+  title: string;
+  news_content: string;
+}
+
+interface NewsEvent {
+  event_id: number;
+  event_content: string;
+  news_list: NewsItem[];
+  impact: number;
+}
+
+interface Prediction {
+  content: string;
+  confidence_score: number;
+  reason: string;
+  cause: {
+    weight: number;
+    event: {
+      event_id: number;
+      event_content: string;
+    }
+  }[];
+}
+
+interface ApiResponse {
+  events: NewsEvent[];
+  predictions: Prediction[];
+}
 
 // Define props interface with optional parameters
 interface NewsAnalysisProps {
@@ -36,7 +67,23 @@ export function NewsAnalysis({
   const [networkLinks, setNetworkLinks] = useState<NetworkLink[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // API data state
+  const [apiEvents, setApiEvents] = useState<NewsEvent[]>([])
+  const [apiPredictions, setPredictions] = useState<Prediction[]>([])
+  
+  // State for expanded news
+  const [expandedNewsIds, setExpandedNewsIds] = useState<number[]>([])
 
+  // Toggle news expansion
+  const toggleNewsExpansion = (newsId: number) => {
+    if (expandedNewsIds.includes(newsId)) {
+      setExpandedNewsIds(expandedNewsIds.filter(id => id !== newsId));
+    } else {
+      setExpandedNewsIds([...expandedNewsIds, newsId]);
+    }
+  };
+  
   // Handle data source change
   const handleDataSourceChange = (value: string) => {
     setDataSource(value as DataSource);
@@ -50,63 +97,117 @@ export function NewsAnalysis({
     setTimePeriod(value as TimePeriod);
   };
 
-  // Effect to fetch data based on dataSource and timePeriod
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        
-        // Construct the endpoints based on dataSource and timePeriod
-        // Keep lowercase for news endpoints which match your db.json structure
-        const newsEndpoint = `${dataSource}${timePeriod}`
-        const sentimentEndpoint = `${dataSource}Sentiment`
-        const nodesEndpoint = `${dataSource}Networknodes`
-        const linksEndpoint = `${dataSource}Networklinks`
-
-        console.log(`Fetching from: ${newsEndpoint}, ${sentimentEndpoint}, ${nodesEndpoint}, ${linksEndpoint}`);
-
-        // Fetch data
-        const [newsResponse, sentimentResponse, nodesResponse, linksResponse] = await Promise.all([
-          fetch(`http://localhost:3001/${newsEndpoint}`),
-          fetch(`http://localhost:3001/${sentimentEndpoint}`),
-          fetch(`http://localhost:3001/${nodesEndpoint}`),
-          fetch(`http://localhost:3001/${linksEndpoint}`)
-        ]);
-  
-        if (!newsResponse.ok) {
-          throw new Error(`Failed to fetch news data from ${newsEndpoint}`);
-        }
-        if (!sentimentResponse.ok) {
-          throw new Error(`Failed to fetch sentiment data from ${sentimentEndpoint}`);
-        }
-        if (!nodesResponse.ok) {
-          throw new Error(`Failed to fetch network nodes from ${nodesEndpoint}`);
-        }
-        if (!linksResponse.ok) {
-          throw new Error(`Failed to fetch network links from ${linksEndpoint}`);
-        }
-  
-        const news = await newsResponse.json();
-        const sentiment = await sentimentResponse.json();
-        const nodes = await nodesResponse.json();
-        const links = await linksResponse.json();
-  
-        setNewsData(news);
-        setSentimentData(sentiment);
-        setNetworkNodes(nodes);
-        setNetworkLinks(links);
-        setError(null);
-  
-      } catch (err) {
-        console.error(err);
-        setError(`Error loading financial data: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
-        setLoading(false);
+  // Fetch data from Flask API
+  const fetchApiData = async () => {
+    try {
+      setLoading(true);
+      
+      // Construct the API endpoint using the updated parameter name
+      const endpoint = `http://localhost:5001/api/${dataSource}/predict-from-news?time_period=${timePeriod}&limit=5`;
+      
+      console.log(`Fetching data from: ${endpoint}`);
+      
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
       }
+      
+      const data: ApiResponse = await response.json();
+      
+      console.log("API response:", data);
+      
+      // Update state with API data
+      setApiEvents(data.events || []);
+      setPredictions(data.predictions || []);
+      
+      // Convert API data to format needed for visualization
+      convertApiDataToComponents(data);
+      
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError(`Error loading data from API: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setLoading(false);
     }
+  };
   
-    fetchData();
-  }, [dataSource, timePeriod]); // Re-fetch when dataSource or timePeriod changes
+  // Convert API data to format needed for visualization components
+  const convertApiDataToComponents = (data: ApiResponse) => {
+    // Convert events to NewsData format for list view
+    const newsItems: NewsData[] = data.events.map((event, index) => {
+      // Generate random sentiment for demo purposes
+      // In a real app, you would get this from the API
+      const sentiments = ["positive", "negative", "neutral"];
+      const randomSentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
+      
+      return {
+        id: event.event_id,
+        title: event.event_content,
+        source: event.news_list.length > 0 ? `News sources: ${event.news_list.length}` : "No sources",
+        time: new Date().toLocaleTimeString(),
+        sentiment: randomSentiment,
+        impact: event.impact,
+        categories: ["News", "Finance"],
+      };
+    });
+    
+    setNewsData(newsItems);
+    
+    // Generate sentiment data for pie chart
+    const sentiments = {
+      positive: 0,
+      negative: 0,
+      neutral: 0
+    };
+    
+    newsItems.forEach(item => {
+      sentiments[item.sentiment as keyof typeof sentiments]++;
+    });
+    
+    const pieData: SentimentData[] = [
+      { name: "Positive", value: sentiments.positive, color: "#10b981" },
+      { name: "Negative", value: sentiments.negative, color: "#ef4444" },
+      { name: "Neutral", value: sentiments.neutral, color: "#f59e0b" },
+    ].filter(item => item.value > 0);
+    
+    setSentimentData(pieData);
+    
+    // Generate network data for graph view
+    const nodes: NetworkNode[] = data.events.map((event) => ({
+      id: `event-${event.event_id}`,
+      group: 1 // Events in group 1
+    }));
+    
+    // Add prediction nodes
+    data.predictions.forEach((prediction, index) => {
+      nodes.push({
+        id: `prediction-${index}`,
+        group: 2 // Predictions in group 2
+      });
+    });
+    
+    // Create links between predictions and their causes
+    const links: NetworkLink[] = [];
+    data.predictions.forEach((prediction, predIndex) => {
+      prediction.cause.forEach(cause => {
+        links.push({
+          source: `event-${cause.event.event_id}`,
+          target: `prediction-${predIndex}`,
+          value: cause.weight
+        });
+      });
+    });
+    
+    setNetworkNodes(nodes);
+    setNetworkLinks(links);
+  };
+
+  // Fetch data when parameters change
+  useEffect(() => {
+    fetchApiData();
+  }, [dataSource, timePeriod]);
   
   // Update local state when prop changes
   useEffect(() => {
@@ -222,44 +323,81 @@ export function NewsAnalysis({
       {/* Main content based on viewType */}
       {viewType === "list" && (
         <div className="space-y-3 h-full overflow-y-auto pr-1">
-          {newsData.map((news) => (
-            <Card
-              key={news.id}
-              className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30"
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 bg-primary/10 dark:bg-primary/20 p-2 rounded-full">
-                    {getSentimentIcon(news.sentiment)}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-slate-800 dark:text-slate-100">{news.title}</h4>
-                    <div className="flex items-center text-xs text-muted-foreground mt-1">
-                      <span>{news.source}</span>
-                      <span className="mx-2">•</span>
-                      <Clock className="h-3 w-3 mr-1" />
-                      <span>{news.time}</span>
+          {apiEvents.length > 0 ? (
+            apiEvents.map((event) => (
+              <Card
+                key={event.event_id}
+                className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30"
+              >
+                <CardContent className="p-4">
+                  <div 
+                    className="flex items-start gap-3"
+                    onClick={() => toggleNewsExpansion(event.event_id)}
+                  >
+                    <div className="mt-0.5 bg-primary/10 dark:bg-primary/20 p-2 rounded-full">
+                      {getSentimentIcon(newsData.find(n => n.id === event.event_id)?.sentiment || "neutral")}
                     </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {news.categories.map((category) => (
-                        <Badge key={category} variant="outline" className="text-xs">
-                          {category}
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-medium text-slate-800 dark:text-slate-100">{event.event_content}</h4>
+                        {expandedNewsIds.includes(event.event_id) ? (
+                          <ChevronUp className="h-4 w-4 ml-2 text-slate-500" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 ml-2 text-slate-500" />
+                        )}
+                      </div>
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
+                        <span>{event.news_list.length > 0 ? `${event.news_list.length} news sources` : "No sources"}</span>
+                        <span className="mx-2">•</span>
+                        <Clock className="h-3 w-3 mr-1" />
+                        <span>Recent</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <Badge key="news" variant="outline" className="text-xs">
+                          News
                         </Badge>
-                      ))}
-                      <Badge className={`text-xs ${getSentimentColor(news.sentiment)}`}>
-                        {news.sentiment.charAt(0).toUpperCase() + news.sentiment.slice(1)}
+                        <Badge key="finance" variant="outline" className="text-xs">
+                          Finance
+                        </Badge>
+                        <Badge className={`text-xs ${getSentimentColor(newsData.find(n => n.id === event.event_id)?.sentiment || "neutral")}`}>
+                          {newsData.find(n => n.id === event.event_id)?.sentiment?.charAt(0).toUpperCase() + 
+                           (newsData.find(n => n.id === event.event_id)?.sentiment?.slice(1) || "Neutral")}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="secondary" className="font-medium">
+                        {event.impact}% Impact
                       </Badge>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <Badge variant="secondary" className="font-medium">
-                      {news.impact}% Impact
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  
+                  {/* Expanded news content */}
+                  {expandedNewsIds.includes(event.event_id) && (
+                    <div className="mt-4 pl-10 border-t pt-3 border-dashed border-slate-200 dark:border-slate-700">
+                      <h5 className="font-medium text-sm mb-2">Related News</h5>
+                      {event.news_list.length > 0 ? (
+                        <div className="space-y-3">
+                          {event.news_list.map((news, idx) => (
+                            <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-md text-sm">
+                              <h6 className="font-medium mb-1">{news.title}</h6>
+                              <p className="text-muted-foreground">{news.news_content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No news articles available for this event.</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="p-4 text-center text-muted-foreground">
+              No news events found. Try changing the time period or data source.
+            </div>
+          )}
         </div>
       )}
   
@@ -292,14 +430,57 @@ export function NewsAnalysis({
   
       {/* Graph view */}
       {viewType === "graph" && (
-        <div className="h-full overflow-hidden rounded-lg">
+        <div className="h-[400px] overflow-hidden rounded-lg">
           <div className="h-full">
             <EventPredictionGraph
               networkNodes={networkNodes}
               networkLinks={networkLinks}
-              dataSource={dataSource}
-              timePeriod={timePeriod}
             />
+          </div>
+        </div>
+      )}
+      
+      {/* Predictions Section */}
+      {apiPredictions.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">
+            Predicted Outcomes
+          </h3>
+          <div className="space-y-3">
+            {apiPredictions.map((prediction, index) => (
+              <Card key={index} className="border-l-4 border-l-indigo-500 dark:bg-slate-800/30">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-slate-800 dark:text-slate-100">
+                        {prediction.content}
+                      </h4>
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        {prediction.reason}
+                      </div>
+                      {prediction.cause.length > 0 && (
+                        <div className="mt-3">
+                          <h5 className="text-xs font-medium mb-1">Contributing Factors:</h5>
+                          <div className="space-y-1">
+                            {prediction.cause.map((cause, causeIdx) => (
+                              <div key={causeIdx} className="flex items-center">
+                                <div className="w-8 text-xs font-medium text-slate-500">{cause.weight}%</div>
+                                <div className="flex-1 text-xs truncate">{cause.event.event_content}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="outline" className="font-medium">
+                        {prediction.confidence_score}% Confidence
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       )}

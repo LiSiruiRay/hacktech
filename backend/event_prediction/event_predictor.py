@@ -73,7 +73,7 @@ class EventPredictor:
             # Initialize the client
             self.client = OpenAI(
                         api_key=self.api_key,  # Doesn't matter if LM Studio doesn't check
-                        base_url="https://a8ea-131-215-220-32.ngrok-free.app/v1"  # Note: base_url instead of api_base
+                        base_url="https://7113-47-44-167-162.ngrok-free.app/v1"  # Note: base_url instead of api_base
                     )
             
         else: 
