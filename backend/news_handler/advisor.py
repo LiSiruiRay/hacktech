@@ -18,7 +18,7 @@ def generate_tactical_signals(clusters: List[Dict]) -> str:
     # build the prompt
     system = (
       "You are a smart portfolio advisor.  "
-      "The user holds AAPL, MSFT, AMZN, GOOGL, TSLA, META.  "
+      "The user holds AAPL, MSFT, AMZN, GOOGL, META.  "
       "Based on the following news cluster topics+summaries, give 3 tactical signals "
       "like 'Buy more X', 'Take profits on Y', or 'Consider sector Z', each with a one-sentence rationale."
     )
