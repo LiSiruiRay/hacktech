@@ -13,3 +13,4 @@ class Event:
     event_id: int  
     summary: str
     news_list: list[News]
+    topic: str = "General"  # Add default topic

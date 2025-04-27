@@ -21,6 +21,8 @@ API_KEY = os.getenv("EVENT_PREDICTION_OPENAI_API_KEY")
 
 # Import from news_handler directly
 from news_handler.news_query import real_time_query
+from news_handler.advisor import generate_tactical_signals
+from news_handler.risk_opportunity_advisor import generate_risk_opportunity_signals
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -35,7 +37,7 @@ market_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.
 personal_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.PRIVATE)
 
 # Helper function to check cache validity
-def is_cache_valid(cache_time, max_age_minutes=25):
+def is_cache_valid(cache_time, max_age_minutes=30):
     """Check if cached data is still valid"""
     if not cache_time:
         return False
@@ -63,33 +65,52 @@ def set_cached_data(data_source, cache_key, data):
     print(f"Cached data for {full_key}")
 
 # Helper functions for data formatting
-def format_news_item(news: Union[News, Dict]) -> Dict[str, Any]:
-    """Format a news item for API response"""
-    if isinstance(news, News):
+def format_news_item(item: Union[dict, Any]) -> Dict[str, Any]:
+    """
+    Normalize a news‐item into {title, news_content}.
+    Handles either:
+     - A dict (with keys "title" and "news_content" or "summary")
+     - Any object with .title and .news_content attributes
+    """
+    # object with attributes
+    if hasattr(item, "title") and hasattr(item, "news_content"):
         return {
-            "title": news.title,
-            "news_content": news.news_content
-        }
-    else:
-        return {
-            "title": news.get("title", ""),
-            "news_content": news.get("summary", "")
+            "title": item.title,
+            "news_content": item.news_content
         }
 
+    # plain dict
+    if isinstance(item, dict):
+        return {
+            "title": item.get("title", ""),
+            # some of your dicts use "news_content", others "summary"
+            "news_content": item.get("news_content", item.get("summary", ""))
+        }
+
+    # ultimate fallback
+    return {
+        "title": str(item),
+        "news_content": ""
+    }
+
 def format_event_for_response(event, event_id: int, max_news: int = 5) -> Dict[str, Any]:
-    """Format an event for API response"""
-    # Handle different event types (NewsEvent objects vs dictionaries from real_time_query)
     if isinstance(event, NewsEvent):
         event_content = event.event_content
+        event_topic = getattr(event, "topic", "Unknown Topic")
         news_list = [format_news_item(news) for news in event.news_list[:max_news]]
     else:
-        event_content = event["summary"]
-        news_list = [format_news_item(news) for news in event["news_list"][:max_news]]
+        event_content = event.get("summary", "Summary not available.")
+        event_topic = event.get("topic", "Unknown Topic")  # <-- FIX THIS LINE!!
+        news_list = [format_news_item(news) for news in event.get("news_list", [])[:max_news]]
     
     return {
         "event_id": event_id,
         "event_content": event_content,
-        "news_list": news_list
+        "topic": event_topic,
+        "news_list": news_list,
+        "risk": getattr(event, "risk", None),
+        "opportunity": getattr(event, "opportunity", None),
+        "rationale": getattr(event, "rationale", None)
     }
 
 def format_prediction_for_response(prediction) -> Dict[str, Any]:
@@ -231,12 +252,19 @@ def predict_from_news(data_source):
         print(f"Prediction took {time.time() - prediction_start:.2f}s")
         
         # Format response
+            # Format response
         formatted_events = []
         for idx, news_result in enumerate(news_results):
-            event = format_event_for_response(news_events[idx], news_events[idx].event_id, max_news=5)
-            # Use the percentage from news_query as impact
-            event["impact"] = news_result["Percentage"]
-            formatted_events.append(event)
+            # grab the raw dict that came out of real_time_query()
+            raw = news_result["Event"]   # this has keys: summary, topic, news_list
+
+            # format off of the dict, not your NewsEvent object
+            formatted = format_event_for_response(raw, idx + 1, max_news=5)
+
+            # now attach impact
+            formatted["impact"] = news_result["Percentage"]
+            formatted_events.append(formatted)
+
         
         formatted_predictions = [format_prediction_for_response(pred) for pred in predictions.predictions]
         
@@ -244,6 +272,36 @@ def predict_from_news(data_source):
             "events": formatted_events,
             "predictions": formatted_predictions
         }
+        if data_source == "personal":
+            clusters_for_advice = [
+                {
+                    "topic": raw["Event"]["topic"],
+                    "summary": raw["Event"]["summary"]
+                }
+                for raw in news_results
+            ]
+            print("[RO advisor] payload clusters_for_advice =", json.dumps(clusters_for_advice, indent=2))
+            try:
+                advice = generate_tactical_signals(clusters_for_advice)
+                response_data["advice"] = advice
+            except Exception as e:
+                print(f"[advisor error] {e}")
+            try:
+                ro_signals = generate_risk_opportunity_signals(clusters_for_advice)
+                print("[RO advisor] returned signals =", ro_signals)
+
+                # 🛠 NEW: Merge R/O back into events
+                for event, ro_signal in zip(formatted_events, ro_signals):
+                    event["risk"] = ro_signal.get("risk")
+                    event["opportunity"] = ro_signal.get("opportunity")
+                    event["rationale"] = ro_signal.get("rationale")
+
+                # Also include separately if you want
+                response_data["riskOpportunitySignals"] = ro_signals
+            except Exception as e:
+                print(f"[RO advisor error] {e}")
+
+
         
         # Cache the results
         set_cached_data(data_source, cache_key, response_data)
@@ -309,170 +367,13 @@ def predict_events():
         print(error_trace)
         return jsonify({"error": str(e), "traceback": error_trace}), 500
 
-# Sample data endpoint for testing
-@app.route('/api/sample-data', methods=['GET'])
-def get_sample_data():
-    """Get sample data for testing purposes"""
-    data_source = request.args.get('data_source', default="market", type=str).lower()
-    
-    if data_source == "personal":
-        # Personal sample data
-        sample_events = [
-            {
-                "event_id": 1,
-                "event_content": "Portfolio rebalanced with 10% increase in tech stocks",
-                "news_list": [
-                    {
-                        "title": "Tech Sector Shows Strong Growth",
-                        "news_content": "The technology sector has shown remarkable growth in the last quarter."
-                    },
-                    {
-                        "title": "Investment Strategy Update",
-                        "news_content": "Financial advisors recommend increasing tech allocation in diversified portfolios."
-                    }
-                ]
-            },
-            {
-                "event_id": 2,
-                "event_content": "Dividend payment received from energy sector holdings",
-                "news_list": [
-                    {
-                        "title": "Energy Companies Increase Dividends",
-                        "news_content": "Major energy companies have announced higher dividend payouts for shareholders."
-                    }
-                ]
-            }
-        ]
-        
-        sample_predictions = [
-            {
-                "cause": [
-                    {
-                        "weight": 70,
-                        "event": {
-                            "event_id": 1,
-                            "event_content": "Portfolio rebalanced with 10% increase in tech stocks"
-                        }
-                    },
-                    {
-                        "weight": 30,
-                        "event": {
-                            "event_id": 2,
-                            "event_content": "Dividend payment received from energy sector holdings"
-                        }
-                    }
-                ],
-                "content": "Portfolio value likely to increase by 3-5% in the next quarter",
-                "confidence_score": 75,
-                "reason": "The increased allocation to technology stocks positions your portfolio to benefit from the sector's continued growth. Tech companies are showing strong earnings and innovation potential. Additionally, the stable dividend income from energy holdings provides a reliable income stream that can be reinvested."
-            },
-            {
-                "cause": [
-                    {
-                        "weight": 60,
-                        "event": {
-                            "event_id": 1,
-                            "event_content": "Portfolio rebalanced with 10% increase in tech stocks"
-                        }
-                    }
-                ],
-                "content": "Potential for higher portfolio volatility in the short term",
-                "confidence_score": 65,
-                "reason": "While the increased tech allocation is likely to boost returns, it may also introduce more volatility to your portfolio. Technology stocks typically experience larger price swings than more stable sectors, which could lead to more pronounced fluctuations in your overall portfolio value."
-            }
-        ]
-    else:
-        # Market sample data
-        sample_events = [
-            {
-                "event_id": 1,
-                "event_content": "Federal Reserve raises interest rates by 0.25%",
-                "news_list": [
-                    {
-                        "title": "Fed Signals Rate Hike",
-                        "news_content": "The Federal Reserve signaled a rate hike due to inflation concerns."
-                    },
-                    {
-                        "title": "Markets React to Potential Rate Increase",
-                        "news_content": "Stock markets showed volatility as investors anticipated the Fed's decision."
-                    }
-                ]
-            },
-            {
-                "event_id": 2,
-                "event_content": "Oil prices increase by 5% following OPEC meeting",
-                "news_list": [
-                    {
-                        "title": "OPEC Agrees to Cut Production",
-                        "news_content": "OPEC members agreed to reduce oil production by 1 million barrels per day."
-                    }
-                ]
-            }
-        ]
-        
-        sample_predictions = [
-            {
-                "cause": [
-                    {
-                        "weight": 70,
-                        "event": {
-                            "event_id": 1,
-                            "event_content": "Federal Reserve raises interest rates by 0.25%"
-                        }
-                    },
-                    {
-                        "weight": 30,
-                        "event": {
-                            "event_id": 2,
-                            "event_content": "Oil prices increase by 5% following OPEC meeting"
-                        }
-                    }
-                ],
-                "content": "Economic growth slows down in the following quarter.",
-                "confidence_score": 85,
-                "reason": "The combination of increased interest rates from the Federal Reserve and higher oil prices is likely to slow down economic growth. Higher interest rates can lead to reduced consumer spending and business investment, while increased oil prices can raise production costs, leading to higher prices for consumers. This combination puts downward pressure on economic activity."
-            },
-            {
-                "cause": [
-                    {
-                        "weight": 60,
-                        "event": {
-                            "event_id": 2,
-                            "event_content": "Oil prices increase by 5% following OPEC meeting"
-                        }
-                    },
-                    {
-                        "weight": 40,
-                        "event": {
-                            "event_id": 1,
-                            "event_content": "Federal Reserve raises interest rates by 0.25%"
-                        }
-                    }
-                ],
-                "content": "Inflation rates remain high due to increased costs.",
-                "confidence_score": 90,
-                "reason": "Oil prices directly impact the cost of transportation and goods production, which, combined with higher interest rates making credit more expensive, can sustain high inflation rates as these cost increases are passed on to consumers. Historical patterns show such factors contribute significantly to persistent inflation."
-            },
-            {
-                "cause": [
-                    {
-                        "weight": 80,
-                        "event": {
-                            "event_id": 1,
-                            "event_content": "Federal Reserve raises interest rates by 0.25%"
-                        }
-                    }
-                ],
-                "content": "Real estate market experiences a slowdown in sales.",
-                "confidence_score": 75,
-                "reason": "Higher interest rates result in higher mortgage costs, making home-buying more expensive and less accessible to many potential buyers. This tends to cool housing market activity. The Fed's decision to raise rates indicates a strategic attempt to moderate economic activity, which often correlates with a slowdown in real estate transactions."
-            }
-        ]
-    
-    return jsonify({
-        "events": sample_events,
-        "predictions": sample_predictions
-    })
+
+# manually clear cache
+@app.route('/api/clear-cache', methods=['POST'])
+def clear_cache():
+    cache.clear()
+    return jsonify({"status": "ok", "message": "Cache cleared."})
+
 
 if __name__ == "__main__":
     # Start the Flask app

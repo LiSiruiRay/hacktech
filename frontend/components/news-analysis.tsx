@@ -8,6 +8,9 @@ import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus, Ch
 import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" 
 import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CustomTooltip from "@/components/customtooltip";
+
+const PERSONAL_STOCKS = ["AAPL", "MSFT", "AMZN", "GOOGL", "TSLA", "META"];
 
 // Define time period type
 type TimePeriod = "day" | "week" | "month"
@@ -25,10 +28,14 @@ interface NewsItem {
 interface NewsEvent {
   event_id: number;
   event_content: string;
-  event_topic: string;
+  topic: string;
   news_list: NewsItem[];
   impact: number;
+  risk?: number;         // <- new
+  opportunity?: number;  // <- new
+  rationale?: string;    // <- new
 }
+
 
 interface Prediction {
   content: string;
@@ -43,9 +50,18 @@ interface Prediction {
   }[];
 }
 
+interface RiskOpportunitySignal {
+  topic: string;
+  risk: number;
+  opportunity: number;
+  rationale: string;
+}
+
 interface ApiResponse {
   events: NewsEvent[];
   predictions: Prediction[];
+  advice?: string;
+  riskOpportunitySignals?: RiskOpportunitySignal[];
 }
 
 // Define props interface with optional parameters
@@ -68,6 +84,11 @@ export function NewsAnalysis({
   const [networkLinks, setNetworkLinks] = useState<NetworkLink[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [advice, setAdvice] = useState<string | null>(null)
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
+
+  // PRE-FETCHING - TRACK WHAT HAS ALREADY BEEN PREFETCHED
+  const [prefetchedCombinations, setPrefetchedCombinations] = useState<Set<string>>(new Set())
   
   // API data state
   const [apiEvents, setApiEvents] = useState<NewsEvent[]>([])
@@ -117,60 +138,94 @@ export function NewsAnalysis({
   };
 
   // Fetch data from Flask API
-  const fetchApiData = async () => {
+  // Modified fetchApiData without prefetching tracking
+  const fetchApiData = async (ds: DataSource = dataSource, tp: TimePeriod = timePeriod, silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+        
+        // Reset expanded states when fetching new data
+        setExpandedNewsIds([]);
+        setExpandedContentIds([]);
+        setExpandedPredictionIds([]);
+      }
       
-      // Reset expanded states when fetching new data
-      setExpandedNewsIds([]);
-      setExpandedContentIds([]);
-      setExpandedPredictionIds([]);
-      
-      // Construct the API endpoint using the updated parameter name
-      const endpoint = `http://localhost:5001/api/${dataSource}/predict-from-news?time_period=${timePeriod}&limit=5`;
-      
-      console.log(`Fetching data from: ${endpoint}`);
-      
+      // Construct the API endpoint
+      let endpoint = `http://localhost:5001/api/${ds}/predict-from-news`
+                + `?time_period=${tp}&limit=5`;
+      if (ds === "personal") {
+        const tickersParam = PERSONAL_STOCKS.join(",");
+        endpoint += `&tickers=${encodeURIComponent(tickersParam)}`;
+      }
+
+      if (!silent) console.log(`Fetching data from: ${endpoint}`);
       const response = await fetch(endpoint);
-      
       if (!response.ok) {
         throw new Error(`API request failed with status ${response.status}`);
       }
       
       const data: ApiResponse = await response.json();
+      setAdvice(data.advice ?? null)
+
       
-      console.log("API response:", data);
-      console.log("Predictions received:", data.predictions ? data.predictions.length : 0);
-      
-      // Validate data to ensure we don't display empty content
-      if (!data.events || data.events.length === 0) {
-        throw new Error("No events received from API");
+      if (!silent) {
+        console.log("API response received");
+        
+        // Validate data to ensure we don't display empty content
+        if (!data.events || data.events.length === 0) {
+          throw new Error("No events received from API");
+        }
+        
+        // Only update state for visible fetches
+        setApiEvents(data.events || []);
+        setPredictions(data.predictions || []);
+        
+        // Convert API data to format needed for visualization
+        convertApiDataToComponents(data);
+        
+        setError(null);
       }
-      
-      // Check for empty summaries and log them
-      const emptySummaries = data.events.filter(event => 
-        !event.event_content || event.event_content === "Summary not available."
-      );
-      if (emptySummaries.length > 0) {
-        console.warn(`Found ${emptySummaries.length} events with empty summaries`);
-      }
-      
-      // Update state with API data
-      setApiEvents(data.events || []);
-      setPredictions(data.predictions || []);
-      
-      // Convert API data to format needed for visualization
-      convertApiDataToComponents(data);
-      
-      setError(null);
     } catch (err) {
       console.error(err);
-      setError(`Error loading data from API: ${err instanceof Error ? err.message : String(err)}`);
+      if (!silent) {
+        // Try to use sample data instead
+        try {
+          console.log("Attempting to use sample data as fallback");
+          const sampleEndpoint = `http://localhost:5001/api/sample-data?data_source=${ds}`;
+          
+          const sampleResponse = await fetch(sampleEndpoint);
+          
+          if (sampleResponse.ok) {
+            const sampleData: ApiResponse = await sampleResponse.json();
+            
+            console.log("Successfully loaded sample data as fallback");
+            
+            // Use sample data instead
+            setApiEvents(sampleData.events || []);
+            setPredictions(sampleData.predictions || []);
+            
+            // Convert sample data to visualization format
+            convertApiDataToComponents(sampleData);
+            
+            // Set a friendlier error message
+            setError("Using sample data for visualization. Live data is temporarily unavailable.");
+          } else {
+            // If sample data also fails, show original error
+            setError(`Error loading data from API: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        } catch (fallbackErr) {
+          console.error("Error loading sample data:", fallbackErr);
+          setError(`Error loading data from API: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
   
+
   // Extract a title from event content
   const extractTitle = useCallback((content: string): string => {
     if (!content || content === "Summary not available.") {
@@ -211,15 +266,14 @@ export function NewsAnalysis({
     
     // Generate cluster distribution data for pie chart instead of sentiment
     const pieData: SentimentData[] = data.events.map((event) => {
-      // Generate a consistent color based on event_id
       const colors = ["#10b981", "#ef4444", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899"];
       const colorIndex = event.event_id % colors.length;
       
       return {
-        name: event.event_topic,
-        value: event.impact, // The percentage from the backend
+        name: event.topic || `Cluster ${event.event_id}`, // Now using the topic from backend
+        value: event.impact,
         color: colors[colorIndex],
-        fullTitle: extractTitle(event.event_content) // Add a full title for tooltips
+        fullTitle: extractTitle(event.event_content)
       };
     }).filter(item => item.value > 0);
     
@@ -265,6 +319,7 @@ export function NewsAnalysis({
     fetchApiData();
   }, [dataSource, timePeriod]);
   
+
   // Update local state when prop changes
   useEffect(() => {
     setDataSource(defaultDataSource);
@@ -347,7 +402,12 @@ export function NewsAnalysis({
         {/* View type toggle */}
         <div className="flex space-x-1 border rounded-md overflow-hidden border-slate-200 dark:border-slate-700">
           <button
-            onClick={() => setViewType("list")}
+            onClick={() => {
+              setSelectedTopic(null);
+              setViewType("list");
+            }}
+            
+            
             className={`p-2 transition-colors ${
               viewType === "list" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
             }`}
@@ -356,7 +416,10 @@ export function NewsAnalysis({
             <List className="h-4 w-4" />
           </button>
           <button
-            onClick={() => setViewType("pie")}
+            onClick={() => {
+              setViewType("pie");
+              setSelectedTopic(null);
+            }}
             className={`p-2 transition-colors ${
               viewType === "pie" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
             }`}
@@ -365,7 +428,10 @@ export function NewsAnalysis({
             <PieChartIcon className="h-4 w-4" />
           </button>
           <button
-            onClick={() => setViewType("graph")}
+            onClick={() => {
+              setViewType("graph");
+              setSelectedTopic(null);
+            }}
             className={`p-2 transition-colors ${
               viewType === "graph" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
             }`}
@@ -383,11 +449,11 @@ export function NewsAnalysis({
             apiEvents.map((event) => {
               const newsItem = newsData.find(n => n.id === event.event_id);
               const isContentExpanded = expandedContentIds.includes(event.event_id);
-              
+              const borderColor = event.risk && event.risk >= 8 ? "border-l-red-500" : "border-l-primary";
               return (
                 <Card
                   key={event.event_id}
-                  className="hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-primary dark:bg-slate-800/30"
+                  className={`hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${borderColor} dark:bg-slate-800/30`}
                 >
                   <CardContent className="p-4">
                     <div 
@@ -441,7 +507,17 @@ export function NewsAnalysis({
                         <p className="text-sm text-slate-700 dark:text-slate-300">
                           {event.event_content}
                         </p>
-                        
+                        {(event.risk !== undefined && event.opportunity !== undefined && event.rationale) && (
+                          <div className="mt-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-md">
+                            <h5 className="text-sm font-medium mb-2">Risk/Opportunity Analysis:</h5>
+                            <div className="text-sm">
+                              🔴 <strong>Risk:</strong> {event.risk} &nbsp;
+                              🟢 <strong>Opportunity:</strong> {event.opportunity}
+                            </div>
+                            <p className="mt-2 text-xs italic text-gray-600">{event.rationale}</p>
+                          </div>
+                        )}
+
                         {/* Button to show/hide news */}
                         <button
                           onClick={(e) => {
@@ -506,24 +582,49 @@ export function NewsAnalysis({
                 fill="#8884d8"
                 dataKey="value"
                 label={({ name, value }) => `${name}: ${value}%`}
+                onClick={(entry) => {
+                  // entry.payload.name is your cluster/topic
+                  setSelectedTopic(entry.payload.name)
+                }}
               >
                 {sentimentData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <RechartsTooltip 
-                formatter={(value, name, props) => {
-                  // Find the corresponding data entry
-                  const entry = sentimentData.find(item => item.name === name);
-                  // Return the percentage and a shorter version of the event content as the name
-                  return [`${value}%`, entry?.fullTitle || name];
-                }}
-              />
+              <RechartsTooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
           <div className="text-xs text-center text-muted-foreground mt-2">
             Showing distribution of news articles across topic clusters
           </div>
+          <div className="w-full min-h-[140px] mt-4 flex flex-col items-center justify-start">
+            {selectedTopic ? (
+              <div className="w-full p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
+                {(() => {
+                  const sig = apiEvents.find(r => {
+                    const eventTopic = (r.topic || "General").trim().toLowerCase();
+                    const selected = (selectedTopic || "").trim().toLowerCase();
+                    return eventTopic === selected || selected.includes(eventTopic);
+                  });
+                                 
+                  if (!sig) return <p className="text-sm text-center">No signal for {selectedTopic}</p>
+                  return (
+                    <>
+                      <h5 className="text-sm font-medium mb-2">{sig.topic}</h5>
+                      <p className="text-sm">
+                        🔴 Risk: <strong>{sig.risk}</strong> &nbsp;
+                        🟢 Opportunity: <strong>{sig.opportunity}</strong>
+                      </p>
+                      <p className="mt-2 text-xs italic text-gray-400">{sig.rationale}</p>
+                    </>
+                  )
+                })()}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground">Click a slice above to see detailed signals</div>
+            )}
+          </div>
+
         </div>
       )}
   
@@ -608,6 +709,20 @@ export function NewsAnalysis({
               );
             })}
           </div>
+        </div>
+      )}
+      {advice && (
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">
+            AI-Driven Portfolio Signals
+          </h3>
+          <Card className="border-l-4 border-l-emerald-500 dark:bg-slate-800/30 hover:bg-accent/50 transition-colors">
+            <CardContent className="p-4">
+              <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                {advice}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

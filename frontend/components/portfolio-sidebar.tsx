@@ -36,7 +36,6 @@ const stocksData = [
     change: 0.87,
     changePercent: 0.54,
   },
-  { symbol: "TSLA", name: "Tesla Inc.", shares: 4, price: 177.58, value: 710.32, change: -1.23, changePercent: -0.69 },
   {
     symbol: "META",
     name: "Meta Platforms Inc.",
@@ -46,6 +45,15 @@ const stocksData = [
     change: 2.56,
     changePercent: 0.54,
   },
+  {
+    symbol: "IBM",
+    name: "International Business Machines Corp.",
+    shares: 12,
+    price: 190.25,
+    value: 2240.0,
+    change: -0.89,
+    changePercent: -0.44,
+  }
 ]
 
 const cryptoData = [
