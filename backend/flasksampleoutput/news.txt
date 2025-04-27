@@ -1,0 +1,61 @@
+curl "http://localhost:5001/api/news?days=1&limit=3"
+
+# Output
+{
+  "events": [
+    {
+      "event_content": "Multiple law firms, including Rosen Law Firm, Bleichmar Fonti & Auld LLP, and Robbins Geller Rudman & Dowd LLP, are investigating or filing lawsuits against various companies such as Pony AI, Treace Medical Concepts, Fluence Energy, The Bancorp, RH, BigBear.ai, Viatris, Aldeyra Therapeutics, Ready Capital, Solaris Energy Infrastructure, Firsthand Technology, enCore Energy, Atkore Inc., Napco Security Technologies, and Avis Budget Group. These actions stem from allegations of securities law violations, including material misstatements and misleading disclosures during specified class periods. Investors are urged to be aware of upcoming important dates related to these cases, like lead plaintiff deadlines. Some investigations and lawsuits seek to address potential fraud, violations of federal securities laws, or misrepresentations that may have impacted shareholder value across various industries such as energy, biotech, finance, and technology. The ongoing legal scrutiny emphasizes the importance of investor due diligence amid ongoing securities claims.",
+      "event_id": 1,
+      "news_list": [
+        {
+          "news_content": "NEW YORK, April 26, 2025 ( GLOBE NEWSWIRE ) -- WHY: Rosen Law Firm, a global investor rights law firm, continues to investigate potential securities claims on behalf of shareholders of Pony AI Inc. PONY resulting from allegations that Pony AI may have issued materially misleading business ...",
+          "title": "If You Have Suffered Losses in Pony AI Inc.  ( NASDAQ: PONY ) , You Are Encouraged to Contact The Rosen Law Firm About Your Rights - Pony AI  ( NASDAQ:PONY ) "
+        },
+        {
+          "news_content": "NEW YORK, April 26, 2025 ( GLOBE NEWSWIRE ) -- WHY: Rosen Law Firm, a global investor rights law firm, reminds purchasers of securities of Treace Medical Concepts, Inc. TMCI between May 8, 2023 and May 7, 2024, both dates inclusive ( the \"Class Period\" ) , of the important June 10, 2025 lead ...",
+          "title": "ROSEN, SKILLED INVESTOR COUNSEL, Encourages Treace Medical Concepts, Inc. Investors to Secure Counsel Before Important Deadline in Securities Class Action - TMCI - Treace Medical Concepts  ( NASDAQ:TMCI ) "
+        },
+        {
+          "news_content": "SAN DIEGO, April 26, 2025 ( GLOBE NEWSWIRE ) -- The law firm of Robbins Geller Rudman & Dowd LLP announces that purchasers of Fluence Energy, Inc.",
+          "title": "FLNC INVESTOR ALERT: Robbins Geller Rudman & Dowd LLP Announces that Fluence Energy, Inc. Investors with Substantial Losses Have Opportunity to Lead Securities Class Action Lawsuit - Fluence Energy  ( NASDAQ:FLNC ) "
+        }
+      ]
+    },
+    {
+      "event_content": "Recent summaries highlight advancements in health, wellness, and medical treatments. Natural remedies such as NaturaPro Skin Tag Remover and Prime Biome aim to improve skin and gut health. Supplements like PrimeGENIX, Glocho6, VitaSeal, and Aqua Sculpt target blood sugar regulation, weight management, and metabolic health, emphasizing natural ingredients and scientifically backed formulations. Devices and therapies such as the Vital Flex Core utilize EMS technology for core muscle activation, while legal steroids offer safer muscle gain alternatives. Cancer research is progressing with IO Biotech\u2019s immune-modulatory vaccines and Protara\u2019s promising therapies for bladder cancer. Men\u2019s prostate health and male enhancement remain key concerns, with innovative programs addressing confidence and stamina issues. Innovations in vaccines, such as Valneva's chikungunya vaccine, receive official recommendations, reflecting ongoing advancements. Overall, these summaries underscore a focus on natural solutions, cutting-edge medical research, and holistic approaches to health and aging.",
+      "event_id": 2,
+      "news_list": [
+        {
+          "news_content": "New York, April 26, 2025 ( GLOBE NEWSWIRE ) -- Why skin tags form and the common causes behind them The challenges people face when removing skin tags through traditional methods How NaturaPro Skin Tag Remover positions itself as a natural at-home skin tag treatment",
+          "title": "NaturaPro Skin Tag Remover Complaints Investigated: A Real Skin Tag Free Pro Option to Use"
+        },
+        {
+          "news_content": "NEW YORK, April 26, 2025 ( GLOBE NEWSWIRE ) -- For anyone pursuing better health-whether it's sustained energy, improved focus, or weight management, balanced blood sugar is often the hidden key.",
+          "title": "Glucovy Reviews  ( Customer Complaints Investigated )  Does This Gluco Control Supplement Really Work?"
+        },
+        {
+          "news_content": "CG Oncology Announces Best-in-Disease Durability Data in BOND-003 Cohort C and Promising Early Signal in Cohort P for Cretostimogene Grenadenorepvec at ...",
+          "title": "CG Oncology Announces Best-in-Disease Durability Data in BOND-003 Cohort C and Promising Early Signal in Cohort P for Cretostimogene Grenadenorepvec at the American Urological Association Annual Meeting"
+        }
+      ]
+    },
+    {
+      "event_content": "Recent headlines reveal a diverse spectrum of political, economic, and technological developments. Joe Rogan and Bernie Sanders found common ground on a key issue, highlighting bipartisan potential. Investment advice emphasizes REITs with high yields and growth, alongside opportunities in AI, energy demand, and blockchain token presales like XRPL\u2019s first AI-powered decentralized exchange. Tesla advances autonomous vehicles with its robotaxi project, and Lucid faces leadership and profitability challenges despite record deliveries. The crypto market remains volatile but increasingly active, with Bitcoin and XRP gaining attention through ETFs and futures. U.S. regulatory attitudes toward crypto are softening, while global tensions impact trade, tariffs, and energy markets. Major corporations like Coca-Cola and Netflix showcase resilience and innovation, yet geopolitical controversies and policy shifts continue to influence industry dynamics. Notably, U.S. political figures grapple with impeachment calls, tax policy debates, and economic reforms amid a backdrop of global financial uncertainty.",
+      "event_id": 3,
+      "news_list": [
+        {
+          "news_content": "Joe Rogan and Sen. Bernie Sanders ( I-VT ) don't usually end up in the same political conversation, let alone agreeing, at least not lately. But on a recent episode of the \"Joe Rogan Experience,\" the podcast host found common ground with the longtime progressive senator on a key issue: the ...",
+          "title": "Joe Rogan Agrees With Bernie Sanders, Saying 'He's Right That You Should Be Scared Of Oligarchs; They Shouldn't Be Running The Government' - NVIDIA  ( NASDAQ:NVDA ) "
+        },
+        {
+          "news_content": "These real estate investment trusts (REITs) yield 4% or more and offer double-digit growth in some cases. Buy them, hold them, and reinvest the dividends.",
+          "title": "The Best REIT Stocks to Invest $1,000 in Right Now"
+        },
+        {
+          "news_content": "This streaming video giant may have more room to run.",
+          "title": "Think It's Too Late to Buy Netflix? Here's the Biggest Reason Why There's Still Time."
+        }
+      ]
+    }
+  ]
+}

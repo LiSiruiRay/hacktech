@@ -6,3 +6,5 @@ sentence-transformers
 openai
 pymongo[srv]
 flask
+flask-cors
+python-dotenv
