@@ -601,12 +601,9 @@ export function NewsAnalysis({
             {selectedTopic ? (
               <div className="w-full p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
                 {(() => {
-                  const sig = apiEvents.find(r => {
-                    const eventTopic = (r.topic || "General").trim().toLowerCase();
-                    const selected = (selectedTopic || "").trim().toLowerCase();
-                    return eventTopic === selected || selected.includes(eventTopic);
-                  });
-                                 
+                  const sig = apiEvents.find(r => 
+                    r.topic.trim().toLowerCase() === selectedTopic.trim().toLowerCase()
+                  )                  
                   if (!sig) return <p className="text-sm text-center">No signal for {selectedTopic}</p>
                   return (
                     <>
@@ -615,7 +612,7 @@ export function NewsAnalysis({
                         🔴 Risk: <strong>{sig.risk}</strong> &nbsp;
                         🟢 Opportunity: <strong>{sig.opportunity}</strong>
                       </p>
-                      <p className="mt-2 text-xs italic text-gray-400">{sig.rationale}</p>
+                      <p className="mt-2 text-xs italic text-gray-300">{sig.rationale}</p>
                     </>
                   )
                 })()}
