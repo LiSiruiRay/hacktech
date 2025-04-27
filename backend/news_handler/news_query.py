@@ -72,18 +72,48 @@ def get_summary(events, max_words=150):
         summaries = [news.summary for news in event.news_list]
         combined_summary = "\n".join(summaries)
         
-        try: 
-            response = client.chat.completions.create(
-                model = "gpt-4.1-nano", 
-                messages=[
-                    {"role": "system", "content": f"Provide a concise summary of the following news summaries in no more than {max_words} (IMPORTANT) words."},
-                    {"role": "user", "content": combined_summary}
-                ], 
+        # Add retry logic for rate limits
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try: 
+                response = client.chat.completions.create(
+                    model = "gpt-4.1-nano", 
+                    messages=[
+                        {"role": "system", "content": f"Provide a concise summary of the following news summaries in no more than {max_words} (IMPORTANT) words."},
+                        {"role": "user", "content": combined_summary}
+                    ], 
+                )
+                event.summary = response.choices[0].message.content
+                break  # Success, exit retry loop
                 
-            )
-            event.summary = response.choices[0].message.content
-        except Exception as e:
-            print(f"Error generating summary: {e}")
+            except Exception as e:
+                retry_count += 1
+                error_message = str(e)
+                
+                # Check if it's a rate limit error
+                if "rate_limit" in error_message.lower() and retry_count < max_retries:
+                    # Try to extract wait time from error message
+                    import re
+                    import time
+                    
+                    wait_time = 30  # Default wait time in seconds
+                    wait_match = re.search(r'try again in (\d+\.\d+)s', error_message)
+                    if wait_match:
+                        wait_time = float(wait_match.group(1)) + 1  # Add small buffer
+                    
+                    print(f"Rate limit hit, waiting {wait_time:.2f}s before retry {retry_count}/{max_retries}")
+                    time.sleep(wait_time)
+                else:
+                    # For non-rate limit errors or if we've exhausted retries
+                    print(f"Error generating summary: {e}")
+                    event.summary = "Summary not available."
+                    break
+        
+        # If we exhausted all retries without success
+        if retry_count == max_retries:
+            print(f"Max retries ({max_retries}) reached without success")
             event.summary = "Summary not available."
     
     return events
