@@ -15,7 +15,7 @@ const API_KEY = process.env.NEXT_PUBLIC_POLYGON_API_KEY
 
 // btw this won't update if the cache is still valid, if u add more
 // may need to pull this from an API? - unsure
-const PERSONAL_STOCKS = ["IBM", "MSFT", "AMZN", "APPL", "GOOGL", "TSLA", "META"]
+const PERSONAL_STOCKS = ["IBM", "MSFT", "AMZN", "AAPL", "GOOGL", "TSLA", "META"]
 
 interface MarketOverviewProps {
   dataSource: "personal" | "market"
