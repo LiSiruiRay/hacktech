@@ -570,61 +570,37 @@ export function NewsAnalysis({
   
       {/* Pie chart view */}
       {viewType === "pie" && (
-        <div className="h-[400px] flex flex-col items-center justify-center">
+        <div className="h-[400px] flex flex-col items-center justify-center pie-chart-container">
           <h4 className="text-sm font-medium mb-4">News Topic Distribution</h4>
-          <ResponsiveContainer width="100%" height="90%">
-            <PieChart>
-              <Pie
-                data={sentimentData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={120}
-                innerRadius={60}
-                paddingAngle={5}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, value }) => `${name}: ${value}%`}
-                onClick={(entry) => {
-                  // entry.payload.name is your cluster/topic
-                  setSelectedTopic(entry.payload.name)
-                }}
-              >
-                {sentimentData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <RechartsTooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="py-5 w-full h-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={sentimentData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={120}
+                  innerRadius={60}
+                  paddingAngle={5}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}%`}
+                  onClick={(entry) => {
+                    setSelectedTopic(entry.payload.name);
+                  }}
+                >
+                  {sentimentData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
           <div className="text-xs text-center text-muted-foreground mt-2">
             Showing distribution of news articles across topic clusters
           </div>
-          <div className="w-full min-h-[140px] mt-4 flex flex-col items-center justify-start">
-            {selectedTopic ? (
-              <div className="w-full p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
-                {(() => {
-                  const sig = apiEvents.find(r => 
-                    r.topic.trim().toLowerCase() === selectedTopic.trim().toLowerCase()
-                  )                  
-                  if (!sig) return <p className="text-sm text-center">No signal for {selectedTopic}</p>
-                  return (
-                    <>
-                      <h5 className="text-sm font-medium mb-2">{sig.topic}</h5>
-                      <p className="text-sm">
-                        🔴 Risk: <strong>{sig.risk}</strong> &nbsp;
-                        🟢 Opportunity: <strong>{sig.opportunity}</strong>
-                      </p>
-                      <p className="mt-2 text-xs italic text-gray-300">{sig.rationale}</p>
-                    </>
-                  )
-                })()}
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground">Click a slice above to see detailed signals</div>
-            )}
-          </div>
-
         </div>
       )}
   
