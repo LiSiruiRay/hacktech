@@ -48,8 +48,6 @@ This is a backend server built with python flask. The application provides finan
 - Sentence Transformers
 - Neo4j Graph Database
 
-
-
 ## Getting Started
 
 ### Prerequisites
@@ -59,7 +57,7 @@ This is a backend server built with python flask. The application provides finan
 
 
 ### Installation
-```base 
+```bash
 cd backend
 pip install -r requirements.txt
 python app.py

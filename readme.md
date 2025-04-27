@@ -54,10 +54,11 @@ npm run dev
 ```
 
 2. **Backend**
-```base 
+```bash
 cd backend
 pip install -r requirements.txt
 python app.py
+```
 
 ## Technologies
 - Next.js 15.x
