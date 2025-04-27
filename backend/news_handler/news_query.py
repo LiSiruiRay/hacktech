@@ -1,13 +1,15 @@
+# news_query.py
 import os
 import hashlib
 import requests
 import pytz
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from news import News, Event
+from news_handler.news import News, Event
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import AgglomerativeClustering
 from openai import OpenAI
+from topic_generator.topic_generator import topic_generator
 
 
 load_dotenv()
@@ -67,24 +69,82 @@ def cluster(news_list, max_clusters=5):
     return labels
 
 def get_summary(events, max_words=150):
-    for event in events.values(): 
+    for event_idx, event in enumerate(events.values()):
         summaries = [news.summary for news in event.news_list]
         combined_summary = "\n".join(summaries)
+
+        print(f"\n[INFO] Generating summary for event {event_idx} with {len(event.news_list)} news articles.")
+
+        # Add retry logic for rate limits
+        max_retries = 3
+        retry_count = 0
         
-        try: 
-            response = client.chat.completions.create(
-                model = "gpt-4.1-nano", 
-                messages=[
-                    {"role": "system", "content": f"Provide a concise summary of the following news summaries in no more than {max_words} (IMPORTANT) words."},
-                    {"role": "user", "content": combined_summary}
-                ], 
+        while retry_count < max_retries:
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4.1-nano",
+                    messages=[
+                        {"role": "system", "content": f"Provide a concise summary of the following news summaries in no more than {max_words} words."},
+                        {"role": "user", "content": combined_summary}
+                    ],
+                )
+                event.summary = response.choices[0].message.content.strip()
                 
-            )
-            event.summary = response.choices[0].message.content
-        except Exception as e:
-            print(f"Error generating summary: {e}")
+                if not event.summary or event.summary == "Summary not available.":
+                    raise ValueError("Generated empty or fallback summary.")
+
+                print(f"[SUCCESS] Summary for event {event_idx}: {event.summary[:100]}...")  # First 100 chars
+                
+                # Now generate topic
+                try:
+                    # inside get_summary()
+                    topic_response = topic_generator(event.summary)
+
+                    # Save the topic
+                    event.topic = topic_response.get('topic', 'General')
+
+                    # (New) Save the risk, opportunity, and rationale into event object
+                    event.risk = topic_response.get('risk', None)
+                    event.opportunity = topic_response.get('opportunity', None)
+                    event.rationale = topic_response.get('rationale', None)
+                    print(f"[SUCCESS] Generated topic for event {event_idx}: {event.topic}")
+                except Exception as topic_error:
+                    print(f"[ERROR] Failed to generate topic for event {event_idx}: {topic_error}")
+                    event.topic = 'General'
+
+                break  # Success, exit retry loop
+
+            except Exception as e:
+                retry_count += 1
+                error_message = str(e)
+
+                print(f"[ERROR] Attempt {retry_count}/{max_retries} to generate summary failed: {error_message}")
+
+                if "rate_limit" in error_message.lower() and retry_count < max_retries:
+                    # Wait based on rate limit error
+                    import re
+                    import time
+                    
+                    wait_time = 30  # Default wait time in seconds
+                    wait_match = re.search(r'try again in (\d+\.\d+)s', error_message)
+                    if wait_match:
+                        wait_time = float(wait_match.group(1)) + 1  # Add small buffer
+                    
+                    print(f"[RATE LIMIT] Waiting {wait_time:.2f} seconds before retrying...")
+                    time.sleep(wait_time)
+                else:
+                    # Non-rate limit error or exhausted retries
+                    event.summary = "Summary not available."
+                    event.topic = "General"
+                    print(f"[FALLBACK] Setting summary and topic to default values for event {event_idx}.")
+                    break
+
+        # If exhausted retries
+        if retry_count == max_retries:
+            print(f"[MAX RETRIES] Could not generate summary after {max_retries} tries. Using fallback for event {event_idx}.")
             event.summary = "Summary not available."
-    
+            event.topic = "General"
+
     return events
 
 def hash_event_label(labels, news_list):
@@ -100,7 +160,7 @@ def hash_event_label(labels, news_list):
 def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
     if time_range == "day":
         days_to_query = 1
-        daily_limit = 1000
+        daily_limit = 2000
     elif time_range == "week":
         days_to_query = 7
         daily_limit = 1000
@@ -150,6 +210,7 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
             "Event": {
                 "event_id": event.event_id,
                 "summary": event.summary,
+                "topic": getattr(event, 'topic', 'General'),
                 "news_list": event.news_list
             }
         })

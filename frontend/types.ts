@@ -14,6 +14,7 @@ export interface NewsData {
     name: string;
     value: number;
     color: string;
+    fullTitle?: string;
   }
   
   // Network graph nodes

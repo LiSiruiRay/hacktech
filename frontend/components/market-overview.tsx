@@ -9,13 +9,14 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import CustomTooltip from "@/components/customtooltip" 
 
 // next.js requires it to start with NEXT_PUBLIC_ for env vars
 const API_KEY = process.env.NEXT_PUBLIC_POLYGON_API_KEY
 
 // btw this won't update if the cache is still valid, if u add more
 // may need to pull this from an API? - unsure
-const PERSONAL_STOCKS = ["IBM", "MSFT", "AMZN", "AAPL", "GOOGL", "TSLA", "META"]
+const PERSONAL_STOCKS = ["IBM", "MSFT", "AMZN", "AAPL", "GOOGL", "META"]
 
 interface MarketOverviewProps {
   dataSource: "personal" | "market"
@@ -23,7 +24,7 @@ interface MarketOverviewProps {
 }
 
 interface DataPoint {
-  name: string
+  name: number
   value: number
 }
 
@@ -51,6 +52,8 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
   const [stockData, setStockData] = useState<StockData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // for Top Performers - show all or only top 4
+  const [showAll, setShowAll] = useState(false);
 
   const handleTimePeriodChange = (v: string) => {
     setTimePeriod(v as "day" | "week" | "month")
@@ -116,8 +119,8 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
 
         if (dataSource === "market") {
           console.log("[DEBUG] Fetching SPY", { from, to, timePeriod })
-          // if day, fetch every 15 min, otherwise, fetch a data point per day
-          const interval = timePeriod === "day" ? "15/minute" : "1/day"
+          // if day, fetch every 30 min, otherwise, fetch a data point per day
+          const interval = timePeriod === "day" ? "30/minute" : "1/day"
           const chartUrl = `https://api.polygon.io/v2/aggs/ticker/SPY/range/${interval}/${from}/${to}?adjusted=true&sort=asc&limit=5000&apiKey=${API_KEY}`
           console.log("[DEBUG] Chart URL:", chartUrl)
 
@@ -129,9 +132,10 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
           }
 
           const points = chartJson.results.map((entry: any) => ({
-            name: new Date(entry.t).toLocaleString(),
+            name: entry.t,
             value: entry.c,
           }))
+          points.sort((a: DataPoint, b: DataPoint) => a.name - b.name) //sort by timestamp
 
           setChartData(points)
 
@@ -147,7 +151,7 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
           const gainers = snapshotJson.tickers
             .filter((t: any) => t.todaysChangePerc != null)
             .sort((a: any, b: any) => b.todaysChangePerc - a.todaysChangePerc)
-            .slice(0, 4)
+            .slice(0, 7)
             .map((g: any, i: number) => ({
               id: i,
               symbol: g.ticker,
@@ -168,27 +172,37 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
           localStorage.setItem(cacheKey, JSON.stringify(cacheData));
           
         } else {
-          console.log("[DEBUG] Fetching personal portfolio", { from, to })
-
-          const allPrices: Record<string, number[]> = {}
-          const stocksInfo: StockData[] = []
-
+          console.log("[DEBUG] Fetching personal portfolio", { from, to });
+        
+          const allStockPrices: Record<string, { t: number; c: number }[]> = {};
+          const timestampsSet = new Set<number>();
+          const stocksInfo: StockData[] = [];
+        
           for (const [idx, symbol] of PERSONAL_STOCKS.entries()) {
-            const interval = timePeriod === "day" ? "15/minute" : "1/day"
-            const url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/${interval}/${from}/${to}?adjusted=true&sort=asc&limit=5000&apiKey=${API_KEY}`
-            console.log("[DEBUG] Fetching", symbol, url)
-
-            const res = await fetch(url)
-            const json = await res.json()
-
+            const interval = timePeriod === "day" ? "30/minute" : "1/day";
+            const url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/${interval}/${from}/${to}?adjusted=true&sort=asc&limit=5000&apiKey=${API_KEY}`;
+            console.log("[DEBUG] Fetching", symbol, url);
+        
+            const res = await fetch(url);
+            const json = await res.json();
+        
             if (!json.results || json.results.length === 0) {
-              console.error("No results for", symbol)
-              continue
+              console.error("No results for", symbol);
+              continue;
             }
-
-            const first = json.results[0]
-            const last = json.results[json.results.length - 1]
-
+        
+            allStockPrices[symbol] = json.results.map((entry: any) => ({
+              t: entry.t,
+              c: entry.c,
+            }));
+        
+            for (const entry of json.results) {
+              timestampsSet.add(entry.t);
+            }
+        
+            const first = json.results[0];
+            const last = json.results[json.results.length - 1];
+        
             stocksInfo.push({
               id: idx,
               symbol,
@@ -196,30 +210,45 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
               price: last.c,
               change: last.c - first.c,
               changePercent: ((last.c - first.c) / first.c) * 100,
-            })
-
-            for (const entry of json.results) {
-              const label = timePeriod === "day" ? new Date(entry.t).toLocaleString() : new Date(entry.t).toISOString().split("T")[0]
-              if (!allPrices[label]) allPrices[label] = []
-              allPrices[label].push(entry.c)
+            });
+          }
+        
+          const timestamps = Array.from(timestampsSet).sort((a, b) => a - b);
+        
+          const lastKnownPrice: Record<string, number> = {}; // symbol -> last known price
+          const symbolToPrices = { ...allStockPrices }; // copy
+        
+          const points: DataPoint[] = [];
+        
+          for (const t of timestamps) {
+            let sum = 0;
+            let count = 0;
+            for (const symbol of PERSONAL_STOCKS) {
+              const prices = symbolToPrices[symbol] || [];
+              while (prices.length && prices[0].t <= t) {
+                lastKnownPrice[symbol] = prices[0].c;
+                prices.shift();
+              }
+              if (lastKnownPrice[symbol] != null) {
+                sum += lastKnownPrice[symbol];
+                count += 1;
+              }
+            }
+            if (count > 0) {
+              points.push({
+                name: t,
+                value: sum / count,
+              });
             }
           }
-
-          const points = Object.entries(allPrices)
-            .map(([date, prices]) => ({
-              name: date,
-              value: prices.reduce((a, b) => a + b, 0) / prices.length,
-            }))
-            .sort((a, b) => a.name.localeCompare(b.name))
-
-          setChartData(points)
-          setStockData(stocksInfo.sort((a, b) => b.changePercent - a.changePercent))
-          
-          // Cache the data
+        
+          setChartData(points);
+          setStockData(stocksInfo.sort((a, b) => b.changePercent - a.changePercent));
+        
           const cacheData: CachedData = {
             chartData: points,
             stockData: stocksInfo.sort((a, b) => b.changePercent - a.changePercent),
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
           localStorage.setItem(cacheKey, JSON.stringify(cacheData));
         }
@@ -274,16 +303,31 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="h-6 w-48 bg-muted rounded animate-pulse"></div>
-              <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
+              <h3 className="text-lg font-medium">
+                {dataSource === "personal" ? "Portfolio Top Performers" : "Market Top Performers Today"}
+              </h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowAll(prev => !prev)}
+              >
+                {showAll ? "View Less" : "View All"}
+              </Button>
             </div>
-            <div className="space-y-2">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="h-6 w-16 bg-muted rounded animate-pulse"></div>
+            <div className={`space-y-2 transition-all duration-500 overflow-hidden`}>
+              {(dataSource === "personal"
+                ? (showAll ? stockData : stockData.slice(0, 4))
+                : (showAll ? stockData.slice(0, 7) : stockData.slice(0, 4))
+              ).map((s) => (
+                <div key={s.symbol} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <div className="font-medium">{s.symbol}</div>
+                  </div>
                   <div className="text-right">
-                    <div className="h-6 w-20 bg-muted rounded animate-pulse mb-1"></div>
-                    <div className="h-4 w-24 bg-muted rounded animate-pulse"></div>
+                    <div className="font-medium">${s.price.toFixed(2)}</div>
+                    <div className={s.changePercent > 0 ? "text-green-500" : "text-red-500"}>
+                      {s.change > 0 ? "+" : ""}{s.change.toFixed(2)} ({s.changePercent > 0 ? "+" : ""}{s.changePercent.toFixed(1)}%)
+                    </div>
                   </div>
                 </div>
               ))}
@@ -353,22 +397,22 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis 
-                    dataKey="name" 
+                    dataKey="name"
                     tickFormatter={(value) => {
+                      const date = new Date(value);
                       if (timePeriod === "day") {
-                        // For day view, only show time without date
-                        const parts = value.split(", ");
-                        return parts.length > 1 ? parts[1] : value;
+                        return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); // example: "3:45 PM"
                       }
-                      return value;
+                      return date.toLocaleDateString(); // example: "4/27/2025"
                     }}
                   />
+
                   <YAxis 
                     domain={['auto', 'auto']} 
                     scale="linear"
                     padding={{ top: 20, bottom: 20 }}
                   />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip timePeriod={timePeriod} />} />
                   <Area 
                     type="monotone" 
                     dataKey="value" 
@@ -387,10 +431,19 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
           <div className="flex items-center justify-between">
             {/* market doesn't allow pulling outside of today's behavior*/}
             <h3 className="text-lg font-medium">{dataSource === "personal" ? "Portfolio Top Performers" : "Market Top Performers Today"}</h3>
-            <Button variant="outline" size="sm">View All</Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowAll(prev => !prev)}
+            >
+              {showAll ? "View Less" : "View All"}
+            </Button>
           </div>
           <div className="space-y-2">
-            {stockData.map(s => (
+          {(showAll 
+            ? (dataSource === "personal" ? stockData : stockData.slice(0, 7))
+            : stockData.slice(0, 4)
+          ).map(s => (
               <div key={s.symbol} className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <div className="font-medium">{s.symbol}</div>
