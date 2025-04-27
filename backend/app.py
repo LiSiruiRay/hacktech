@@ -142,6 +142,7 @@ def health_check():
 @app.route('/api/news', methods=['GET'])
 def get_news():
     """Get recent news events"""
+    print(f"called this endpoint")
     try:
         time_period = request.args.get('time_period', default="week", type=str).lower()
         if time_period not in ["day", "week", "month"]:
