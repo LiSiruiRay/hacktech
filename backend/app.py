@@ -21,6 +21,8 @@ API_KEY = os.getenv("EVENT_PREDICTION_OPENAI_API_KEY")
 
 # Import from news_handler directly
 from news_handler.news_query import real_time_query
+from news_handler.advisor import generate_tactical_signals
+from news_handler.risk_opportunity_advisor import generate_risk_opportunity_signals
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -104,9 +106,13 @@ def format_event_for_response(event, event_id: int, max_news: int = 5) -> Dict[s
     return {
         "event_id": event_id,
         "event_content": event_content,
-        "topic": event_topic,    # <-- include it properly now
-        "news_list": news_list
+        "topic": event_topic,
+        "news_list": news_list,
+        "risk": getattr(event, "risk", None),
+        "opportunity": getattr(event, "opportunity", None),
+        "rationale": getattr(event, "rationale", None)
     }
+
 def format_prediction_for_response(prediction) -> Dict[str, Any]:
     """Format a prediction for API response"""
     return {
@@ -266,6 +272,36 @@ def predict_from_news(data_source):
             "events": formatted_events,
             "predictions": formatted_predictions
         }
+        if data_source == "personal":
+            clusters_for_advice = [
+                {
+                    "topic": raw["Event"]["topic"],
+                    "summary": raw["Event"]["summary"]
+                }
+                for raw in news_results
+            ]
+            print("[RO advisor] payload clusters_for_advice =", json.dumps(clusters_for_advice, indent=2))
+            try:
+                advice = generate_tactical_signals(clusters_for_advice)
+                response_data["advice"] = advice
+            except Exception as e:
+                print(f"[advisor error] {e}")
+            try:
+                ro_signals = generate_risk_opportunity_signals(clusters_for_advice)
+                print("[RO advisor] returned signals =", ro_signals)
+
+                # 🛠 NEW: Merge R/O back into events
+                for event, ro_signal in zip(formatted_events, ro_signals):
+                    event["risk"] = ro_signal.get("risk")
+                    event["opportunity"] = ro_signal.get("opportunity")
+                    event["rationale"] = ro_signal.get("rationale")
+
+                # Also include separately if you want
+                response_data["riskOpportunitySignals"] = ro_signals
+            except Exception as e:
+                print(f"[RO advisor error] {e}")
+
+
         
         # Cache the results
         set_cached_data(data_source, cache_key, response_data)

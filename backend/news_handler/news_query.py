@@ -97,8 +97,16 @@ def get_summary(events, max_words=150):
                 
                 # Now generate topic
                 try:
+                    # inside get_summary()
                     topic_response = topic_generator(event.summary)
+
+                    # Save the topic
                     event.topic = topic_response.get('topic', 'General')
+
+                    # (New) Save the risk, opportunity, and rationale into event object
+                    event.risk = topic_response.get('risk', None)
+                    event.opportunity = topic_response.get('opportunity', None)
+                    event.rationale = topic_response.get('rationale', None)
                     print(f"[SUCCESS] Generated topic for event {event_idx}: {event.topic}")
                 except Exception as topic_error:
                     print(f"[ERROR] Failed to generate topic for event {event_idx}: {topic_error}")
