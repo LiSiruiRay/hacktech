@@ -25,6 +25,7 @@ interface NewsItem {
 interface NewsEvent {
   event_id: number;
   event_content: string;
+  event_topic: string;
   news_list: NewsItem[];
   impact: number;
 }
@@ -215,7 +216,7 @@ export function NewsAnalysis({
       const colorIndex = event.event_id % colors.length;
       
       return {
-        name: `Cluster ${event.event_id}`,
+        name: event.event_topic,
         value: event.impact, // The percentage from the backend
         color: colors[colorIndex],
         fullTitle: extractTitle(event.event_content) // Add a full title for tooltips

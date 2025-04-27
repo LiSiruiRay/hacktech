@@ -30,7 +30,13 @@ export default function Dashboard() {
   const handleNewsDataSourceChange = (value: string) => {
     setNewsDataSource(value as DataSource)
   }
-
+  //clear local storage
+  function clearLocalCache() {
+    localStorage.clear();
+    console.log("✅ LocalStorage cleared.");
+    alert("Local storage cleared!");
+  }
+  
   return (
     <div className="flex min-h-screen bg-background">
       {/* Left sidebar for portfolio - desktop */}
@@ -79,6 +85,15 @@ export default function Dashboard() {
                 <AvatarImage src="/avatar.png" alt="User" />
                 <AvatarFallback className="bg-primary/10 text-primary">AW</AvatarFallback>
               </Avatar>
+              {/* make visible when i want to clear local storage - not optimal but it's convenient so idc it's a hackathon not production code */}
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8 p-0 text-xs" 
+                onClick={clearLocalCache}
+              >
+                🧹
+              </Button> 
             </div>
           </div>
         </header>
