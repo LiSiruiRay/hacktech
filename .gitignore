@@ -41,6 +41,7 @@ coverage/
 .env.test.local
 .env.production.local
 .env.*.local
+frontend/.env
 
 # Misc
 .DS_Store
@@ -71,6 +72,7 @@ htmlcov/
 *.egg-info/
 .installed.cfg
 *.egg
+backend/.env
 
 # Java
 *.class

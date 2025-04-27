@@ -1,5 +1,4 @@
 # Author: ray
-# Date: 2/25/25
 # Description: Script to run all tests for the event predictor
 
 import unittest
