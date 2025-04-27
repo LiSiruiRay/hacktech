@@ -158,4 +158,4 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
         
     
 if __name__ == "__main__":
-   print(real_time_query("week"))
+   print(real_time_query("day"))

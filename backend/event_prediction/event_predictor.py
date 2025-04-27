@@ -2,6 +2,7 @@
 # Date: 2/25/25
 # Description: Event predictor for predicting future events based on past events
 
+from enum import Enum
 from typing import List, Dict, Optional, Union
 from pydantic import BaseModel, Field
 import os
@@ -42,12 +43,22 @@ class PredictedEvent(BaseModel):
 class PredictedEventList(BaseModel):
     predictions: List[PredictedEvent]
 
+class PredictorType(Enum):
+    PUBLIC = "Public market predictor"
+    PRIVATE = "Private market predictor"
+
+class PrivatePredictionModels(Enum):
+    QWQ_32B = "qwq-32b"
+    GEMMA_27B_IT = "gemma-27b-it"
+    DEEPSEEK_V3_0324 = "deepseek-v3-0324"
+    
+
 class EventPredictor:
     """
     A class for predicting future events based on past events using OpenAI's API.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, predictor_type: PredictorType = PredictorType.PUBLIC):
         """
         Initialize the EventPredictor with an OpenAI API key.
         If no API key is provided, it will use the one from environment variables.
@@ -55,9 +66,21 @@ class EventPredictor:
         Args:
             api_key: Optional OpenAI API key.
         """
-        self.api_key = api_key or OPENAI_API_KEY
-        self.client = OpenAI(api_key=self.api_key)
-    
+        if predictor_type == PredictorType.PUBLIC:
+            self.api_key = api_key or OPENAI_API_KEY
+            self.client = OpenAI(api_key=self.api_key)
+        elif predictor_type == PredictorType.PRIVATE:
+            self.api_key = "lm-studio"
+            # Initialize the client
+            self.client = OpenAI(
+                        api_key=self.api_key,  # Doesn't matter if LM Studio doesn't check
+                        base_url="https://a8ea-131-215-220-32.ngrok-free.app/v1"  # Note: base_url instead of api_base
+                    )
+            
+        else: 
+            raise ValueError("Invalid predictor type")
+        
+        self.predictor_type = predictor_type
     def get_prediction_prompt(self, events: List[Union[NewsEvent, Event]]) -> str:
         """
         Generate a prompt for the OpenAI model to predict future events.
@@ -98,7 +121,7 @@ class EventPredictor:
         
         return prompt
     
-    def predict_events(self, events: List[Union[NewsEvent, Event]], num_predictions: int = 3) -> PredictedEventList:
+    def predict_events(self, events: List[Union[NewsEvent, Event]], num_predictions: int = 3, private_predict_model: PrivatePredictionModels = PrivatePredictionModels.QWQ_32B.name) -> PredictedEventList:
         """
         Predict future events based on past events.
         
@@ -114,14 +137,30 @@ class EventPredictor:
         # Get structured predictions from OpenAI using JSON response format
         print(f"Prompt: {prompt}")
         print(f"user prompt: ---\n Predict {num_predictions} future events based on the provided past events.")
-        completion = self.client.beta.chat.completions.parse(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": f"Predict {num_predictions} future events based on the provided past events."}
-            ],
-            response_format=PredictedEventList,
-        )
+        if self.predictor_type == PredictorType.PUBLIC:
+            completion = self.client.beta.chat.completions.parse(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": f"Predict {num_predictions} future events based on the provided past events."}
+                ],
+                response_format=PredictedEventList
+            )
+        elif self.predictor_type == PredictorType.PRIVATE:
+            completion = self.client.beta.chat.completions.parse(
+                            model=private_predict_model,
+                            messages=[
+                                {"role": "system", "content": prompt},
+                                {"role": "user", "content": f"Predict {num_predictions} future events based on the provided past events."}
+                            ],
+                            response_format=PredictedEventList,
+                            extra_headers={
+                                                "ngrok-skip-browser-warning": "true"
+                                            }
+                        )
+        else:
+            raise ValueError("Invalid predictor type")
+        
         
         # Parse the JSON response
         response_content = completion.choices[0].message.parsed
