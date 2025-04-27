@@ -8,6 +8,8 @@ import { List, PieChartIcon, Network, Clock, TrendingUp, TrendingDown, Minus, Ch
 import EventPredictionGraph from "./events_prediction/event-prediction-graph-updated" 
 import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CustomTooltip from "@/components/customtooltip";
+
 
 // Define time period type
 type TimePeriod = "day" | "week" | "month"
@@ -25,7 +27,7 @@ interface NewsItem {
 interface NewsEvent {
   event_id: number;
   event_content: string;
-  event_topic: string;
+  topic: string;
   news_list: NewsItem[];
   impact: number;
 }
@@ -68,6 +70,10 @@ export function NewsAnalysis({
   const [networkLinks, setNetworkLinks] = useState<NetworkLink[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  
+  // PRE-FETCHING - TRACK WHAT HAS ALREADY BEEN PREFETCHED
+  const [prefetchedCombinations, setPrefetchedCombinations] = useState<Set<string>>(new Set())
   
   // API data state
   const [apiEvents, setApiEvents] = useState<NewsEvent[]>([])
@@ -117,19 +123,24 @@ export function NewsAnalysis({
   };
 
   // Fetch data from Flask API
-  const fetchApiData = async () => {
+  // Modified fetchApiData without prefetching tracking
+  const fetchApiData = async (ds: DataSource = dataSource, tp: TimePeriod = timePeriod, silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+        
+        // Reset expanded states when fetching new data
+        setExpandedNewsIds([]);
+        setExpandedContentIds([]);
+        setExpandedPredictionIds([]);
+      }
       
-      // Reset expanded states when fetching new data
-      setExpandedNewsIds([]);
-      setExpandedContentIds([]);
-      setExpandedPredictionIds([]);
+      // Construct the API endpoint
+      const endpoint = `http://localhost:5001/api/${ds}/predict-from-news?time_period=${tp}&limit=5`;
       
-      // Construct the API endpoint using the updated parameter name
-      const endpoint = `http://localhost:5001/api/${dataSource}/predict-from-news?time_period=${timePeriod}&limit=5`;
-      
-      console.log(`Fetching data from: ${endpoint}`);
+      if (!silent) {
+        console.log(`Fetching data from: ${endpoint}`);
+      }
       
       const response = await fetch(endpoint);
       
@@ -139,37 +150,99 @@ export function NewsAnalysis({
       
       const data: ApiResponse = await response.json();
       
-      console.log("API response:", data);
-      console.log("Predictions received:", data.predictions ? data.predictions.length : 0);
-      
-      // Validate data to ensure we don't display empty content
-      if (!data.events || data.events.length === 0) {
-        throw new Error("No events received from API");
+      if (!silent) {
+        console.log("API response received");
+        
+        // Validate data to ensure we don't display empty content
+        if (!data.events || data.events.length === 0) {
+          throw new Error("No events received from API");
+        }
+        
+        // Only update state for visible fetches
+        setApiEvents(data.events || []);
+        setPredictions(data.predictions || []);
+        
+        // Convert API data to format needed for visualization
+        convertApiDataToComponents(data);
+        
+        setError(null);
       }
-      
-      // Check for empty summaries and log them
-      const emptySummaries = data.events.filter(event => 
-        !event.event_content || event.event_content === "Summary not available."
-      );
-      if (emptySummaries.length > 0) {
-        console.warn(`Found ${emptySummaries.length} events with empty summaries`);
-      }
-      
-      // Update state with API data
-      setApiEvents(data.events || []);
-      setPredictions(data.predictions || []);
-      
-      // Convert API data to format needed for visualization
-      convertApiDataToComponents(data);
-      
-      setError(null);
     } catch (err) {
       console.error(err);
-      setError(`Error loading data from API: ${err instanceof Error ? err.message : String(err)}`);
+      if (!silent) {
+        // Try to use sample data instead
+        try {
+          console.log("Attempting to use sample data as fallback");
+          const sampleEndpoint = `http://localhost:5001/api/sample-data?data_source=${ds}`;
+          
+          const sampleResponse = await fetch(sampleEndpoint);
+          
+          if (sampleResponse.ok) {
+            const sampleData: ApiResponse = await sampleResponse.json();
+            
+            console.log("Successfully loaded sample data as fallback");
+            
+            // Use sample data instead
+            setApiEvents(sampleData.events || []);
+            setPredictions(sampleData.predictions || []);
+            
+            // Convert sample data to visualization format
+            convertApiDataToComponents(sampleData);
+            
+            // Set a friendlier error message
+            setError("Using sample data for visualization. Live data is temporarily unavailable.");
+          } else {
+            // If sample data also fails, show original error
+            setError(`Error loading data from API: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        } catch (fallbackErr) {
+          console.error("Error loading sample data:", fallbackErr);
+          setError(`Error loading data from API: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
+  
+  // Prefetch data combinations in background
+  const prefetchDataCombinations = useCallback(async () => {
+    console.log("Starting background prefetching of data combinations...");
+    
+    // Define combinations to prefetch
+    const combinations: [DataSource, TimePeriod][] = [
+      ["personal", "day"],
+      ["personal", "week"],
+      ["personal", "month"],
+      ["market", "day"],
+      ["market", "week"],
+      ["market", "month"]
+    ];
+    
+    // Skip the currently displayed combination (it's already loaded)
+    const currentCombination = `${dataSource}_${timePeriod}`;
+    
+    // Process combinations with slight delays
+    for (const [ds, tp] of combinations) {
+      const combinationKey = `${ds}_${tp}`;
+      
+      // Skip if it's the current combination or already prefetched
+      if (combinationKey === currentCombination || prefetchedCombinations.has(combinationKey)) {
+        continue;
+      }
+      
+      // Prefetch in background (silent mode)
+      await fetchApiData(ds, tp, true);
+      
+      // Add a small delay between prefetches to avoid overwhelming the server
+      // one minute per
+      await new Promise(resolve => setTimeout(resolve, 70000));
+    }
+    
+    console.log("Background prefetching complete");
+  }, [dataSource, timePeriod, prefetchedCombinations]);
   
   // Extract a title from event content
   const extractTitle = useCallback((content: string): string => {
@@ -211,15 +284,14 @@ export function NewsAnalysis({
     
     // Generate cluster distribution data for pie chart instead of sentiment
     const pieData: SentimentData[] = data.events.map((event) => {
-      // Generate a consistent color based on event_id
       const colors = ["#10b981", "#ef4444", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899"];
       const colorIndex = event.event_id % colors.length;
       
       return {
-        name: event.event_topic,
-        value: event.impact, // The percentage from the backend
+        name: event.topic || `Cluster ${event.event_id}`, // Now using the topic from backend
+        value: event.impact,
         color: colors[colorIndex],
-        fullTitle: extractTitle(event.event_content) // Add a full title for tooltips
+        fullTitle: extractTitle(event.event_content)
       };
     }).filter(item => item.value > 0);
     
@@ -265,6 +337,7 @@ export function NewsAnalysis({
     fetchApiData();
   }, [dataSource, timePeriod]);
   
+
   // Update local state when prop changes
   useEffect(() => {
     setDataSource(defaultDataSource);
@@ -511,14 +584,7 @@ export function NewsAnalysis({
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <RechartsTooltip 
-                formatter={(value, name, props) => {
-                  // Find the corresponding data entry
-                  const entry = sentimentData.find(item => item.name === name);
-                  // Return the percentage and a shorter version of the event content as the name
-                  return [`${value}%`, entry?.fullTitle || name];
-                }}
-              />
+              <RechartsTooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
           <div className="text-xs text-center text-muted-foreground mt-2">
