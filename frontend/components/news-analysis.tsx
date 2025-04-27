@@ -571,8 +571,9 @@ export function NewsAnalysis({
       {/* Pie chart view */}
       {viewType === "pie" && (
         <div className="h-[400px] flex flex-col items-center justify-center pie-chart-container">
+          <div className="w-[400px] h-[400px] mx-auto flex flex-col items-center justify-center pie-chart-container">
           <h4 className="text-sm font-medium mb-4">News Topic Distribution</h4>
-          <div className="py-5 w-full h-full flex items-center justify-center">
+            <div className="py-5 w-full h-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -587,7 +588,8 @@ export function NewsAnalysis({
                   dataKey="value"
                   label={({ name, value }) => `${name}: ${value}%`}
                   onClick={(entry) => {
-                    setSelectedTopic(entry.payload.name);
+                    // entry.payload.name is your cluster/topic
+                    setSelectedTopic(entry.payload.name)
                   }}
                 >
                   {sentimentData.map((entry, index) => (
@@ -597,10 +599,36 @@ export function NewsAnalysis({
                 <RechartsTooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
+            </div>
           </div>
           <div className="text-xs text-center text-muted-foreground mt-2">
             Showing distribution of news articles across topic clusters
           </div>
+          <div className="w-full min-h-[140px] mt-4 flex flex-col items-center justify-start">
+            {selectedTopic ? (
+              <div className="w-full p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
+                {(() => {
+                  const sig = apiEvents.find(r => 
+                    r.topic.trim().toLowerCase() === selectedTopic.trim().toLowerCase()
+                  )                  
+                  if (!sig) return <p className="text-sm text-center">No signal for {selectedTopic}</p>
+                  return (
+                    <>
+                      <h5 className="text-sm font-medium mb-2">{sig.topic}</h5>
+                      <p className="text-sm">
+                        🔴 Risk: <strong>{sig.risk}</strong> &nbsp;
+                        🟢 Opportunity: <strong>{sig.opportunity}</strong>
+                      </p>
+                      <p className="mt-2 text-xs italic text-gray-300">{sig.rationale}</p>
+                    </>
+                  )
+                })()}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground">Click a slice above to see detailed signals</div>
+            )}
+          </div>
+
         </div>
       )}
   
@@ -618,10 +646,14 @@ export function NewsAnalysis({
       
       {/* Predictions Section */}
       {apiPredictions.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-9">
+          <div className="mt-8 pt-8">
+          <div className="mt-4">
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">
             Predicted Outcomes
           </h3>
+          </div>
+          </div>
           <div className="space-y-3">
             {apiPredictions.map((prediction, index) => {
               // Check if this prediction is expanded
