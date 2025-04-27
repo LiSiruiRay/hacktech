@@ -56,8 +56,8 @@ This project is a modern, AI-powered platform that transforms the overwhelming w
 1. **Clone the repository**
 2. **Install backend and frontend dependencies**
 3. **Set up environment variables (API keys for OpenAI, AlphaVantage, MongoDB, etc.)**
-4. **Run the backend Flask server**
-5. **Run the frontend React app**
+4. **Run the backend Flask server (python app.py) **
+5. **Run the frontend React app (npm run dev)**
 6. **Explore the dashboard and start learning!**
 
 ---
