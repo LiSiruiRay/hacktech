@@ -103,10 +103,10 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
         daily_limit = 1000
     elif time_range == "week":
         days_to_query = 7
-        daily_limit = 200
+        daily_limit = 1000
     elif time_range == "month":
-        days_to_query = 30
-        daily_limit = 33
+        days_to_query = 31
+        daily_limit = 50
     else: 
         raise ValueError("Invalid time range.")   
     
@@ -114,7 +114,7 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
     
     for day_offset in range(days_to_query):
         end_day = (datetime.now() - timedelta(days = day_offset)).strftime("%Y%m%dT%H%M")
-        start_day = (datetime.now() - timedelta(days=day_offset + 1)).strftime("%Y%m%dT%H%M")
+        start_day = (datetime.now() - timedelta(days= day_offset + 1)).strftime("%Y%m%dT%H%M")
         if keywords == []:
             url = f'https://www.alphavantage.co/query?function=NEWS_SENTIMENT&time_from={start_day}&time_to={end_day}&limit={daily_limit}&apikey={alpha_vantage_api_key}'
         else:
@@ -125,6 +125,7 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
         data = r.json()
     
         news_list = data_to_news(data)
+        print(len(news_list))
         all_news_list.extend(news_list)
         
     if not all_news_list: 
@@ -157,4 +158,4 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
         
     
 if __name__ == "__main__":
-   print(real_time_query("week", ["AAPL", "TSLA"]))
+   print(real_time_query("week"))
