@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+
+// next.js requires it to start with NEXT_PUBLIC_ for env vars
 const API_KEY = process.env.NEXT_PUBLIC_POLYGON_API_KEY
 
 // btw this won't update if the cache is still valid, if u add more
