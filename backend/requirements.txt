@@ -1,5 +1,3 @@
-newspaper4k
-lxml[html_clean]
 requests
 python-dotenv
 sentence-transformers
