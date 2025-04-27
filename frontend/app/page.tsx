@@ -178,7 +178,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-0 h-[500px]">
               <iframe
-                src="http://localhost:3001"
+                src="http://localhost:3002"
                 className="w-full h-full border-0"
                 title="Graph Analysis"
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
