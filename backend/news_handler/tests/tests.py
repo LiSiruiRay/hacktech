@@ -1,9 +1,11 @@
 import unittest
+import random
+import hashlib
 from unittest.mock import patch, MagicMock
 from news_query import data_to_news, cluster, get_summary, real_time_query, hash_event_label
 from news import News, Event
-import random
-import hashlib
+from datetime import datetime, timedelta
+
 
 class TestNewsQuery(unittest.TestCase):
     def test_data_to_news(self):
@@ -203,8 +205,8 @@ class TestNewsQuery(unittest.TestCase):
             self.assertEqual(events[label].news_list, event.news_list)
     
     @patch('news_query.requests.get')
-    def test_real_time_query_day(self, mock_get):
-        print("\nRunning test_real_time_query_day...")
+    def test_real_time_query(self, mock_get):
+        print("\nRunning test_real_time_query...")
         # Mock the API response
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -236,10 +238,6 @@ class TestNewsQuery(unittest.TestCase):
         self.assertIn("Percentage", result[0])
         self.assertIn("Event", result[0])
 
-    @patch('news_query.requests.get')
-    def test_real_time_query_invalid_time_range(self, mock_get):
-        with self.assertRaises(ValueError):
-            real_time_query("invalid")
             
 if __name__ == "__main__":
     unittest.main()
