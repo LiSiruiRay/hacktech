@@ -1,0 +1,59 @@
+curl -X GET "http://localhost:5001/api/news?time_period=day&limit=3"
+{
+  "events": [
+    {
+      "event_content": "Tesla reported disappointing Q1 results, with declines in deliveries, revenue, margins, and market share. Despite this, Musk announced Tesla's plans for autonomous robotaxis in Austin. The U.S. Old-Age and Survivors Insurance Trust Fund is projected to deplete in eight years. President Trump's \"Liberation Day\" tariffs caused a 12% drop in the S&P 500. Major retailers like Costco and Realty Income offer diverse investment avenues, while REITs yield over 4%. Bitcoin trades at a 40% discount amid withdrawals and potential to reach $100,000 by 2024, with long-term targets possibly hitting $200,000 in 2025. The crypto market shows recovery, but volatility persists. Tesla's energy initiatives, including \"Project Rodeo,\" aim to revolutionize autonomous transport, and Rivian faces mixed results ahead of earnings. The global economy faces instability from tariffs and geopolitical tensions, but sectors like natural gas, AI, and real estate offer promising opportunities. Overall, 2025 presents a volatile yet opportunity-rich landscape across markets and industries.",
+      "event_id": 1,
+      "news_list": [
+        {
+          "news_content": "Tesla ( NASDAQ: TSLA ) reported dismal financial results in the first quarter. Every metric of consequence -- deliveries, revenue, operating margin, and earnings -- declined as the company lost market share across China, Europe, and the United States.But CEO Elon Musk still had good news for ...",
+          "title": "Tesla Stock Investors: Elon Musk Expects 99% Market Share in This Trillion-Dollar Industry"
+        },
+        {
+          "news_content": "The asset reserves of the Old-Age and Survivors Insurance Trust Fund (OASI) are an estimated eight years away from being depleted.",
+          "title": "Will Social Security Payments End in 2033?"
+        },
+        {
+          "news_content": "On April 2, President Donald Trump unveiled his \"Liberation Day\" tariffs, which included a 10% tax on most imported goods and heavier country-specific duties dubbed reciprocal tariffs. The news stunned Wall Street. The S&P 500 ( SNPINDEX: ^GSPC ) declined 12% during the next five trading days, ...",
+          "title": "Warren Buffett Sells His S&P 500 Index Funds Before the Market Crash and Buys a Restaurant Stock Up 375% in 10 Years"
+        }
+      ]
+    },
+    {
+      "event_content": "Despite market volatility in 2025, long-term investors are advised to hold growth stocks like Brookfield Asset Management, Berkshire Hathaway, and The Trade Desk, which present promising opportunities amid dips. Although the S&P 500 and Nasdaq have fallen into correction territory, resilient companies with strong fundamentals continue to attract attention. Defensive plays, such as dividend stocks and gold, are seen as safe havens during turbulence. Tech stocks, despite recent setbacks caused by trade tensions and slowing demand, remain attractive for their long-term growth potential. Notably, Berkshire Hathaway has outperformed markets, driven by strategic investments. Market fluctuations have opened opportunities for bargain buys, especially in undervalued sectors. Experts highlight that market downturns often precede sustained gains, emphasizing the importance of patience, diversification, and selective investing to build wealth over generations. An unusual indicator suggests a significant market move may soon occur, adding a layer of caution and anticipation for investors.",
+      "event_id": 2,
+      "news_list": [
+        {
+          "news_content": "The stock market has gotten off to a rocky start this year, but market volatility is a small price to pay for the large gains of holding shares of a great business over many years. If you put your money in the right growth stocks, you can build wealth that lasts for generations.",
+          "title": "2 Artificial Intelligence Stocks to Buy With $2,000"
+        },
+        {
+          "news_content": "This unique indicator has correctly forecast the direction the benchmark S&P 500 would move 18 out of 18 times since the start of 1945.",
+          "title": "A Rare Wall Street Event Just Triggered for Only the 19th Time in 80 Years -- and It Has a Perfect Track Record of Forecasting Directional Stock Moves"
+        },
+        {
+          "news_content": "Like many stocks, Brookfield Asset Management ( NYSE: BAM ) has slumped this year. Shares of the leading global alternative asset manager were recently below $55 a piece, down more than 15% from their high earlier this year.",
+          "title": "Should You Buy Brookfield Asset Management While It's Below $55?"
+        }
+      ]
+    },
+    {
+      "event_content": "The summaries encompass diverse health, medical, and regulatory updates. Natural supplements like Belly Balance aim to regulate blood sugar and support metabolic health, while collagen gummies and skin tag removers promote skin and joint well-being. Blood sugar control and weight management are linked to gut health, hormonal balance, and factors like environmental toxins. Innovative treatments include cancer vaccines by IO Biotech and Valneva\u2019s chikungunya vaccine, with regulatory authorities endorsing their use. Advances in aging-related therapies highlight human growth hormone and NAD+ to combat fatigue, cognitive decline, and youthful vitality. Pain relief options like Conolidine and natural steroids offer drug-free alternatives. Men\u2019s prostate and sexual health issues remain focal points, emphasizing early detection. Meanwhile, investment activities\u2014such as Ark Invest's trades\u2014signal ongoing interest in biotech and tech firms. Disputes over delivery platform blockages and Gensol Engineering\u2019s share dilution allegations reflect ongoing business conflicts in various sectors.",
+      "event_id": 3,
+      "news_list": [
+        {
+          "news_content": "KEPERRA QLD, Australia, April 27, 2025 ( GLOBE NEWSWIRE ) -- What is Belly Balance? Belly Balance is a natural, plant-based dietary supplement designed to help individuals manage blood sugar levels, support insulin sensitivity, and promote overall metabolic health.",
+          "title": "Belly Balance Australia: Complaints Investigated Sentinel Glycogen Control & Blood Balance Glyco Care Support Explained!"
+        },
+        {
+          "news_content": "The fight escalated this week as both companies accused each other of blocking delivery riders from accepting orders from rival platforms.",
+          "title": "China's delivery services market faces shake up as JD.com takes on Meituan"
+        },
+        {
+          "news_content": "New York, April 26, 2025 ( GLOBE NEWSWIRE ) -- The silent causes behind stubborn toenail fungus and why common treatments often fail Early warning signs and symptoms of nail fungus to watch for before serious complications develop",
+          "title": "NailLuxe Nail Fungus Under Review: Best Topical Nail Repair Formula for Toenail Fungus Treatment"
+        }
+      ]
+    }
+  ]
+}
