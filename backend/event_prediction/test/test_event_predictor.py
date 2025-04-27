@@ -127,6 +127,7 @@ class TestEventPredictor(unittest.TestCase):
         
         predicted = self.predictor.predict_events(self.sample_events)
         print(predicted)
+        # if you want the json
         json_predicted = predicted.model_dump()
         print(f"json_predicted: {json.dumps(json_predicted, indent=4)}")
     
