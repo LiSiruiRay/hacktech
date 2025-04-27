@@ -9,6 +9,7 @@ import EventPredictionGraph from "./events_prediction/event-prediction-graph-upd
 import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomTooltip from "@/components/customtooltip";
+import Sentiment from 'sentiment';
 
 const PERSONAL_STOCKS = ["AAPL", "MSFT", "AMZN", "GOOGL", "TSLA", "META"];
 
@@ -241,27 +242,29 @@ export function NewsAnalysis({
     return content.length > 100 ? content.substring(0, 97) + '...' : content;
   }, []);
   
+  // Initialize sentiment analyzer
+  const sentimentAnalyzer = new Sentiment();
+
   // Convert API data to format needed for visualization components
   const convertApiDataToComponents = useCallback((data: ApiResponse) => {
-    // Convert events to NewsData format for list view
     const newsItems: NewsData[] = data.events.map((event) => {
-      // Generate random sentiment for demo purposes
-      // In a real app, you would get this from the API
-      const sentiments = ["positive", "negative", "neutral"];
-      const randomSentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
-      
+      // Analyze sentiment using the sentiment library
+      const sentimentResult = sentimentAnalyzer.analyze(event.event_content);
+      const sentimentScore = sentimentResult.score;
+      const sentiment = sentimentScore > 0.7 ? "positive" : sentimentScore < -0.7 ? "negative" : "neutral";
+
       return {
         id: event.event_id,
-        title: extractTitle(event.event_content), // Use the helper function
-        fullContent: event.event_content, // Store full content
+        title: extractTitle(event.event_content),
+        fullContent: event.event_content,
         source: event.news_list.length > 0 ? `News sources: ${event.news_list.length}` : "No sources",
         time: new Date().toLocaleTimeString(),
-        sentiment: randomSentiment,
+        sentiment: sentiment,
         impact: event.impact,
         categories: ["News", "Finance"],
       };
     });
-    
+
     setNewsData(newsItems);
     
     // Generate cluster distribution data for pie chart instead of sentiment
@@ -349,13 +352,13 @@ export function NewsAnalysis({
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case "positive":
-        return "bg-green-100 text-green-800 hover:bg-green-200"
+        return "bg-green-100 text-green-800 hover:bg-green-200";
       case "negative":
-        return "bg-red-100 text-red-800 hover:bg-red-200"
+        return "bg-red-100 text-red-800 hover:bg-red-200";
       default:
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
     }
-  }
+  };
 
   // Generate title and timeframe text
   const title = dataSource === "personal" ? "Portfolio" : "Market";

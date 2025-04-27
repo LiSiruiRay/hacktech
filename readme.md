@@ -30,6 +30,7 @@ This project is a modern, AI-powered platform that transforms the overwhelming w
 
 - **Backend:** Python (Flask), leveraging OpenAI models for summarization, topic extraction, and prediction.
     - News is fetched from external APIs (e.g., AlphaVantage), clustered using sentence embeddings, and summarized/analyzed via LLMs.
+    - Sentiment analysis is performed using a lightweight Javascript-based NLP model 
     - Event prediction uses both public and private AI models for market-wide and personalized forecasts.
     - MongoDB is used for persistent storage; diskcache for fast API responses.
     - Neo4j integration: Connects events, companies, and entities for advanced, time-aware predictions and relationship mapping.
@@ -68,6 +69,7 @@ This project is a modern, AI-powered platform that transforms the overwhelming w
 - **User Feedback Integration:** Allow users to provide feedback on predictions and advice.
 -**Authorization and Authentication:** Implement user authentication and authorization.
 - **Scalability and Performance:** Optimize for high traffic and large datasets.
+- **Sentiment Analysis:** Integrate a more robust sentiment analysis model to better understand market sentiment.
 
 ---
 
