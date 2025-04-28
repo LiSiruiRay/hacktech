@@ -9,6 +9,7 @@ import EventPredictionGraph from "./events_prediction/event-prediction-graph-upd
 import { NewsData, SentimentData, NetworkNode, NetworkLink } from "@/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomTooltip from "@/components/customtooltip";
+import Sentiment from 'sentiment';
 
 const PERSONAL_STOCKS = ["AAPL", "MSFT", "AMZN", "GOOGL", "TSLA", "META"];
 
@@ -241,27 +242,29 @@ export function NewsAnalysis({
     return content.length > 100 ? content.substring(0, 97) + '...' : content;
   }, []);
   
+  // Initialize sentiment analyzer
+  const sentimentAnalyzer = new Sentiment();
+
   // Convert API data to format needed for visualization components
   const convertApiDataToComponents = useCallback((data: ApiResponse) => {
-    // Convert events to NewsData format for list view
     const newsItems: NewsData[] = data.events.map((event) => {
-      // Generate random sentiment for demo purposes
-      // In a real app, you would get this from the API
-      const sentiments = ["positive", "negative", "neutral"];
-      const randomSentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
-      
+      // Analyze sentiment using the sentiment library
+      const sentimentResult = sentimentAnalyzer.analyze(event.event_content);
+      const sentimentScore = sentimentResult.score;
+      const sentiment = sentimentScore > 0.7 ? "positive" : sentimentScore < -0.7 ? "negative" : "neutral";
+
       return {
         id: event.event_id,
-        title: extractTitle(event.event_content), // Use the helper function
-        fullContent: event.event_content, // Store full content
+        title: extractTitle(event.event_content),
+        fullContent: event.event_content,
         source: event.news_list.length > 0 ? `News sources: ${event.news_list.length}` : "No sources",
         time: new Date().toLocaleTimeString(),
-        sentiment: randomSentiment,
+        sentiment: sentiment,
         impact: event.impact,
         categories: ["News", "Finance"],
       };
     });
-    
+
     setNewsData(newsItems);
     
     // Generate cluster distribution data for pie chart instead of sentiment
@@ -349,13 +352,13 @@ export function NewsAnalysis({
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case "positive":
-        return "bg-green-100 text-green-800 hover:bg-green-200"
+        return "bg-green-100 text-green-800 hover:bg-green-200";
       case "negative":
-        return "bg-red-100 text-red-800 hover:bg-red-200"
+        return "bg-red-100 text-red-800 hover:bg-red-200";
       default:
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
     }
-  }
+  };
 
   // Generate title and timeframe text
   const title = dataSource === "personal" ? "Portfolio" : "Market";
@@ -567,33 +570,37 @@ export function NewsAnalysis({
   
       {/* Pie chart view */}
       {viewType === "pie" && (
-        <div className="h-[400px] flex flex-col items-center justify-center">
+        <div className="h-[400px] flex flex-col items-center justify-center pie-chart-container">
+          <div className="w-[400px] h-[400px] mx-auto flex flex-col items-center justify-center pie-chart-container">
           <h4 className="text-sm font-medium mb-4">News Topic Distribution</h4>
-          <ResponsiveContainer width="100%" height="90%">
-            <PieChart>
-              <Pie
-                data={sentimentData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={120}
-                innerRadius={60}
-                paddingAngle={5}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, value }) => `${name}: ${value}%`}
-                onClick={(entry) => {
-                  // entry.payload.name is your cluster/topic
-                  setSelectedTopic(entry.payload.name)
-                }}
-              >
-                {sentimentData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <RechartsTooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+            <div className="py-5 w-full h-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={sentimentData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={120}
+                  innerRadius={60}
+                  paddingAngle={5}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}%`}
+                  onClick={(entry) => {
+                    // entry.payload.name is your cluster/topic
+                    setSelectedTopic(entry.payload.name)
+                  }}
+                >
+                  {sentimentData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            </div>
+          </div>
           <div className="text-xs text-center text-muted-foreground mt-2">
             Showing distribution of news articles across topic clusters
           </div>
@@ -601,12 +608,9 @@ export function NewsAnalysis({
             {selectedTopic ? (
               <div className="w-full p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700">
                 {(() => {
-                  const sig = apiEvents.find(r => {
-                    const eventTopic = (r.topic || "General").trim().toLowerCase();
-                    const selected = (selectedTopic || "").trim().toLowerCase();
-                    return eventTopic === selected || selected.includes(eventTopic);
-                  });
-                                 
+                  const sig = apiEvents.find(r => 
+                    r.topic.trim().toLowerCase() === selectedTopic.trim().toLowerCase()
+                  )                  
                   if (!sig) return <p className="text-sm text-center">No signal for {selectedTopic}</p>
                   return (
                     <>
@@ -615,7 +619,7 @@ export function NewsAnalysis({
                         🔴 Risk: <strong>{sig.risk}</strong> &nbsp;
                         🟢 Opportunity: <strong>{sig.opportunity}</strong>
                       </p>
-                      <p className="mt-2 text-xs italic text-gray-400">{sig.rationale}</p>
+                      <p className="mt-2 text-xs italic text-gray-300">{sig.rationale}</p>
                     </>
                   )
                 })()}
@@ -642,10 +646,14 @@ export function NewsAnalysis({
       
       {/* Predictions Section */}
       {apiPredictions.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-9">
+          <div className="mt-8 pt-8">
+          <div className="mt-4">
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">
             Predicted Outcomes
           </h3>
+          </div>
+          </div>
           <div className="space-y-3">
             {apiPredictions.map((prediction, index) => {
               // Check if this prediction is expanded

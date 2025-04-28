@@ -19,10 +19,12 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 load_dotenv()
 API_KEY = os.getenv("EVENT_PREDICTION_OPENAI_API_KEY")
 
+# print("about to import real_time_query…")
 # Import from news_handler directly
 from news_handler.news_query import real_time_query
 from news_handler.advisor import generate_tactical_signals
 from news_handler.risk_opportunity_advisor import generate_risk_opportunity_signals
+# print("imported real_time_query successfully")
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -34,7 +36,7 @@ cache = dc.Cache(cache_dir)
 
 # Initialize event predictors for both market and personal predictions
 market_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.PUBLIC)
-personal_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.PRIVATE)
+personal_predictor = EventPredictor(api_key=API_KEY, predictor_type=PredictorType.PUBLIC)
 
 # Helper function to check cache validity
 def is_cache_valid(cache_time, max_age_minutes=30):
@@ -133,9 +135,11 @@ def get_predictor(data_source: str):
     return personal_predictor if data_source.lower() == "personal" else market_predictor
 
 # Health check endpoint
+# print(f"check point")
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint to verify the API is running"""
+    print("health_check was called")
     return jsonify({"status": "ok", "message": "Event prediction API is running"})
 
 # Fetch news events endpoint
