@@ -19,12 +19,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 load_dotenv()
 API_KEY = os.getenv("EVENT_PREDICTION_OPENAI_API_KEY")
 
-# print("about to import real_time_query…")
 # Import from news_handler directly
 from news_handler.news_query import real_time_query
 from news_handler.advisor import generate_tactical_signals
 from news_handler.risk_opportunity_advisor import generate_risk_opportunity_signals
-# print("imported real_time_query successfully")
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -96,13 +94,14 @@ def format_news_item(item: Union[dict, Any]) -> Dict[str, Any]:
     }
 
 def format_event_for_response(event, event_id: int, max_news: int = 5) -> Dict[str, Any]:
+    print(f"checking event: {event} \n\n ---")
     if isinstance(event, NewsEvent):
         event_content = event.event_content
         event_topic = getattr(event, "topic", "Unknown Topic")
         news_list = [format_news_item(news) for news in event.news_list[:max_news]]
     else:
         event_content = event.get("summary", "Summary not available.")
-        event_topic = event.get("topic", "Unknown Topic")  # <-- FIX THIS LINE!!
+        event_topic = event.get("topic", "Unknown Topic")  # <-- TODO: FIX THIS LINE!!
         news_list = [format_news_item(news) for news in event.get("news_list", [])[:max_news]]
     
     return {
@@ -385,5 +384,5 @@ if __name__ == "__main__":
     # app.run(debug=True, host='0.0.0.0', port=5001)
     import os
 
-    port = int(os.environ.get("PORT", 5000))  # Default to 5000 locally
+    port = int(os.environ.get("PORT", 5001))  # Default to 5000 locally
     app.run(host="0.0.0.0", port=port)
