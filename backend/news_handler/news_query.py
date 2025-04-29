@@ -5,13 +5,28 @@ import requests
 import pytz
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from .news import News, Event  # Use relative import for module in same package
+
+# Try both import styles to work in different contexts
+try:
+    # Try relative import first (when used as a package)
+    from .news import News, Event
+except ImportError:
+    # Fall back to absolute import (when run as a script or in tests)
+    from news import News, Event
+
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import AgglomerativeClustering
 from openai import OpenAI
+# Fix the import to use the correct path
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from topic_generator.topic_generator import topic_generator
 # Add this import for the logger functions
-from news_handler.logger import info, error, debug, warning, log_data
+# Use the same try/except pattern for other relative imports
+try:
+    from .logger import info, error, debug, warning, log_data
+except ImportError:
+    from news_handler.logger import info, error, debug, warning, log_data
 
 load_dotenv()
 
@@ -59,9 +74,23 @@ def data_to_news(data):
     return news_list
         
 def cluster(news_list, max_clusters=5):
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+    # If no news, return empty list of labels
+    if not news_list:
+        return []
+        
     summaries = [news.summary if news.summary is not None else "" for news in news_list]
-    embeddings = model.encode(summaries)
+    
+    # Get embeddings from OpenAI API in batch
+    embeddings = []
+    for summary in summaries:
+        response = client.embeddings.create(
+            input=summary,
+            model="text-embedding-3-small"
+        )
+        embeddings.append(response.data[0].embedding)
+    
+    # Extract embeddings from response
+    # embeddings = [item.embedding for item in response.data]
     
     n_clusters = min(max_clusters, len(news_list)) 
     clustering = AgglomerativeClustering(n_clusters=n_clusters)
@@ -161,13 +190,13 @@ def hash_event_label(labels, news_list):
 def real_time_query(time_range, keywords=[], max_clusters=5, max_words=150):
     if time_range == "day":
         days_to_query = 1
-        daily_limit = 2000
+        daily_limit = 200
     elif time_range == "week":
         days_to_query = 7
-        daily_limit = 1000
+        daily_limit = 30
     elif time_range == "month":
         days_to_query = 31
-        daily_limit = 50
+        daily_limit = 5
     else: 
         raise ValueError("Invalid time range.")   
     
