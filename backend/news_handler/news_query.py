@@ -1,20 +1,17 @@
 # news_query.py
 import os
-import sys
-# Add the parent directory to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import hashlib
 import requests
 import pytz
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from news_handler.news import News, Event
+from .news import News, Event  # Use relative import for module in same package
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import AgglomerativeClustering
 from openai import OpenAI
 from topic_generator.topic_generator import topic_generator
-
+# Add this import for the logger functions
+from news_handler.logger import info, error, debug, warning, log_data
 
 load_dotenv()
 
@@ -161,7 +158,7 @@ def hash_event_label(labels, news_list):
     return events
 
 
-def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
+def real_time_query(time_range, keywords=[], max_clusters=5, max_words=150):
     if time_range == "day":
         days_to_query = 1
         daily_limit = 2000
@@ -205,10 +202,18 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
     #         print(f"  - {news.title}")
     
     total_news = len(all_news_list)
-    print(total_news)
+    info(f"Processing results: total news count = {total_news}")
+    
     result = []
     for event in events.values():
         percentage = int(100 * len(event.news_list) / total_news)
+        info(f"Event {event.event_id[:8]}...: {percentage}% of total news ({len(event.news_list)} articles)")
+        log_data(f"event_summary_{event.event_id[:8]}", {
+            "percentage": percentage,
+            "topic": getattr(event, 'topic', 'General'),
+            "summary_length": len(event.summary) if event.summary else 0
+        })
+        
         result.append({
             "Percentage": percentage,
             "Event": {
@@ -218,7 +223,8 @@ def real_time_query(time_range, keywords=[],max_clusters=5, max_words=150):
                 "news_list": event.news_list
             }
         })
-
+    
+    info(f"Query complete, returning {len(result)} events")
     return result
         
     

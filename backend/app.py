@@ -98,11 +98,14 @@ def format_event_for_response(event, event_id: int, max_news: int = 5) -> Dict[s
     if isinstance(event, NewsEvent):
         event_content = event.event_content
         event_topic = getattr(event, "topic", "Unknown Topic")
-        news_list = [format_news_item(news) for news in event.news_list[:max_news]]
+        # news_list = [format_news_item(news) for news in event.news_list[:max_news]]
+        news_list = [news for news in event.news_list[:max_news]]
     else:
         event_content = event.get("summary", "Summary not available.")
         event_topic = event.get("topic", "Unknown Topic")  # <-- TODO: FIX THIS LINE!!
-        news_list = [format_news_item(news) for news in event.get("news_list", [])[:max_news]]
+        # news_list = [format_news_item(news) for news in event.get("news_list", [])[:max_news]]
+        news_list = [news for news in event.get("news_list", [])[:max_news]]
+        
     
     return {
         "event_id": event_id,
@@ -133,8 +136,12 @@ def get_predictor(data_source: str):
     """Get the appropriate predictor based on data source"""
     return personal_predictor if data_source.lower() == "personal" else market_predictor
 
+def events_2_pure_json(events) -> Dict[str, Any]:
+    for e in events:
+        for news in e["news_list"]:
+            news["json_news"] = news.to_json()
 # Health check endpoint
-# print(f"check point")
+print(f"check point")
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint to verify the API is running"""
@@ -145,7 +152,6 @@ def health_check():
 @app.route('/api/news', methods=['GET'])
 def get_news():
     """Get recent news events"""
-    print(f"called this endpoint")
     try:
         time_period = request.args.get('time_period', default="week", type=str).lower()
         if time_period not in ["day", "week", "month"]:
@@ -162,11 +168,11 @@ def get_news():
         # Fetch fresh data if not in cache
         news_results = real_time_query(time_range=time_period)
         news_results = news_results[:limit]
-        
-        events = [format_event_for_response(event_data["Event"], idx + 1) 
-                 for idx, event_data in enumerate(news_results)]
-        
-        response_data = {"events": events}
+        response_data = news_results
+        # events = [format_event_for_response(event_data["Event"], idx + 1) 
+        #          for idx, event_data in enumerate(news_results)]
+        # events_2_pure_json(events)
+        # response_data = {"events": events}
         
         # Cache the result
         set_cached_data("general", cache_key, response_data)
