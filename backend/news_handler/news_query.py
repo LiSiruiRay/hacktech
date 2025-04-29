@@ -73,25 +73,108 @@ def data_to_news(data):
         news_list.append(news)
     return news_list
         
+import asyncio
+import time
+import random
+
+async def get_embeddings_batch(client, texts, model="text-embedding-3-small", max_retries=5, batch_size=50, rate_limit_per_minute=100000):
+    """
+    Asynchronously get embeddings for a batch of texts with rate limit handling.
+    
+    Args:
+        client: OpenAI client
+        texts: List of texts to embed
+        model: Embedding model to use
+        max_retries: Maximum number of retries on error
+        batch_size: Maximum number of texts per API call
+        rate_limit_per_minute: OpenAI's rate limit (tokens per minute)
+    
+    Returns:
+        List of embeddings
+    """
+    all_embeddings = []
+    
+    # Process in smaller batches to avoid rate limits
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i+batch_size]
+        
+        if i > 0:
+            # Add delay to respect rate limits (conservative approach)
+            # Each embedding request uses about batch_size * avg_tokens_per_text tokens
+            avg_tokens_per_text = 100  # conservative estimate
+            estimated_tokens = len(batch) * avg_tokens_per_text
+            
+            # Calculate sleep time (with jitter to avoid thundering herd)
+            sleep_time = (60 * estimated_tokens / rate_limit_per_minute) + random.uniform(0.1, 0.5)
+            print(f"Rate limiting: Sleeping for {sleep_time:.2f}s before next batch")
+            await asyncio.sleep(sleep_time)
+        
+        # Try with retries
+        for attempt in range(max_retries):
+            try:
+                print(f"Processing embedding batch {i//batch_size + 1}/{(len(texts) + batch_size - 1)//batch_size}")
+                
+                # Make API call
+                response = client.embeddings.create(
+                    input=batch,
+                    model=model
+                )
+                
+                # Extract embeddings
+                batch_embeddings = [item.embedding for item in response.data]
+                all_embeddings.extend(batch_embeddings)
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                print(f"Error in embedding batch {i//batch_size + 1}, attempt {attempt+1}/{max_retries}: {str(e)}")
+                
+                if attempt < max_retries - 1:
+                    # Calculate backoff with jitter
+                    backoff = (2 ** attempt) + random.uniform(0, 1)
+                    print(f"Retrying in {backoff:.2f}s...")
+                    await asyncio.sleep(backoff)
+                else:
+                    print(f"Failed after {max_retries} attempts, using fallback for this batch")
+                    # Fallback with empty embeddings of the correct dimension
+                    for _ in range(len(batch)):
+                        all_embeddings.append([0.0] * 1536)  # Default embedding dimension
+    
+    return all_embeddings
+
 def cluster(news_list, max_clusters=5):
+    """Cluster news articles using embeddings."""
     # If no news, return empty list of labels
     if not news_list:
         return []
         
     summaries = [news.summary if news.summary is not None else "" for news in news_list]
     
-    # Get embeddings from OpenAI API in batch
-    embeddings = []
-    for summary in summaries:
-        response = client.embeddings.create(
-            input=summary,
-            model="text-embedding-3-small"
-        )
-        embeddings.append(response.data[0].embedding)
+    # Use asyncio to get embeddings asynchronously
+    try:
+        # Run the async function in the event loop
+        embeddings = asyncio.run(get_embeddings_batch(
+            client=client,
+            texts=summaries,
+            batch_size=100,  # Process in batches of how much
+            rate_limit_per_minute=100000  # OpenAI's default rate limit
+        ))
+        
+        # Verify we got the right number of embeddings
+        if len(embeddings) != len(summaries):
+            print(f"Warning: Got {len(embeddings)} embeddings for {len(summaries)} texts")
+            # Ensure we have an embedding for each text
+            while len(embeddings) < len(summaries):
+                embeddings.append([0.0] * 1536)  # Add dummy embeddings if needed
+            embeddings = embeddings[:len(summaries)]  # Trim if we got too many
     
-    # Extract embeddings from response
-    # embeddings = [item.embedding for item in response.data]
+    except Exception as e:
+        print(f"Error getting embeddings: {str(e)}")
+        # Fallback: create random embeddings
+        embeddings = []
+        for _ in range(len(summaries)):
+            embeddings.append([random.uniform(-1, 1) for _ in range(1536)])
     
+    # Perform clustering
     n_clusters = min(max_clusters, len(news_list)) 
     clustering = AgglomerativeClustering(n_clusters=n_clusters)
     labels = clustering.fit_predict(embeddings)
