@@ -33,6 +33,8 @@ coverage/
 .rts2_cache_es/
 .rts2_cache_umd/
 .cache/
+# Backend cache directory
+backend/cache/
 
 # dotenv environment variable files
 .env

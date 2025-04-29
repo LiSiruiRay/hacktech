@@ -108,7 +108,7 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
 
       try {
         const today = new Date()
-        today.setDate(today.getDate() - 2) // move back 2 days
+        today.setDate(today.getDate()) // move back 2 days
 
         const daysBack = timePeriod === "day" ? 0 : timePeriod === "week" ? 7 : 30
         const pastDate = new Date(today)
@@ -181,7 +181,7 @@ export function MarketOverview({ dataSource, onDataSourceChange }: MarketOvervie
           for (const [idx, symbol] of PERSONAL_STOCKS.entries()) {
             const interval = timePeriod === "day" ? "30/minute" : "1/day";
             const url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/${interval}/${from}/${to}?adjusted=true&sort=asc&limit=5000&apiKey=${API_KEY}`;
-            console.log("[DEBUG] Fetching", symbol, url);
+            // console.log("[DEBUG] Fetching", symbol, url);
         
             const res = await fetch(url);
             const json = await res.json();

@@ -152,7 +152,7 @@ export default function Dashboard() {
                   <CardDescription className="text-muted-foreground"></CardDescription>
                 </div>
                 <a
-                  href="http://localhost:3001"
+                  href="https://react-graph.project.slray.com/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-primary hover:underline"
@@ -178,7 +178,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-0 h-[500px]">
               <iframe
-                src="http://localhost:3002"
+                src="https://react-graph.project.slray.com/"
                 className="w-full h-full border-0"
                 title="Graph Analysis"
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
